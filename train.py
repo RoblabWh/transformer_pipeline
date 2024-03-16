@@ -1,12 +1,12 @@
 from transformers import AutoImageProcessor, AutoModelForObjectDetection
-import albumentations
+import torchvision.transforms.v2 as transforms
 import numpy as np
 
 from transformers import TrainingArguments
 from transformers import Trainer
 from datasets import load_dataset
 
-
+# TODO must do: export CUDA_VISIBLE_DEVICES=1
 class UniversalTrainer(object):
 
     def __init__(self, checkpoint, args, dataset):
@@ -16,12 +16,18 @@ class UniversalTrainer(object):
         self.dataset = load_dataset(dataset["path"], dataset["version"])
 
         # TODO Transforms may differ from model to model, need to check on this and make it more flexible
-        self.transform = albumentations.Compose([
-            albumentations.Resize(224, 224),
-            albumentations.HorizontalFlip(p=1.0),
-            albumentations.RandomBrightnessContrast(p=1.0),
-        ],
-            bbox_params=albumentations.BboxParams(format="coco", label_fields=["category"]), )
+        # self.transform = albumentations.Compose([
+        #     albumentations.Resize(224, 224),
+        #     albumentations.HorizontalFlip(p=1.0),
+        #     albumentations.RandomBrightnessContrast(p=1.0),
+        # ],
+        #     bbox_params=albumentations.BboxParams(format="coco", label_fields=["category"]), )
+        # TODO Inspect that BBox Error with Albumentations, it stemmed from the fact that the bbox was not in the
+        #  correct bounds of the image, need to check on this
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),])
 
         self.dataset["train"] = self.dataset["train"].with_transform(self.transform_aug_ann)
         # dataset = dataset.train_test_split(test_size=0.2)
@@ -69,12 +75,12 @@ class UniversalTrainer(object):
         images, bboxes, area, categories = [], [], [], []
         for image, objects in zip(examples["image"], examples["objects"]):
             image = np.array(image.convert("RGB"))[:, :, ::-1]
-            out = self.transform(image=image, bboxes=objects["bbox"], category=objects["category"])
+            out_image, out_bboxes, out_category = self.transform(image, objects["bbox"], objects["category"])
 
             area.append(objects["area"])
-            images.append(out["image"])
-            bboxes.append(out["bboxes"])
-            categories.append(out["category"])
+            images.append(out_image)
+            bboxes.append(out_bboxes)
+            categories.append(out_category)
 
         targets = [
             {"image_id": id_, "annotations": self.formatted_anns(id_, cat_, ar_, box_)}
@@ -98,17 +104,17 @@ if __name__ == "__main__":
 
     checkpoint = "SenseTime/deformable-detr"
     training_args = TrainingArguments(
-        output_dir="test_detr",
+        output_dir="test_detr1",
         remove_unused_columns=False,
         fp16=True,
         learning_rate=2e-5,
-        per_device_train_batch_size=1,
-        per_device_eval_batch_size=1,
-        num_train_epochs=2,
+        per_device_train_batch_size=6,
+        per_device_eval_batch_size=6,
+        num_train_epochs=40,
         weight_decay=0.01,
-        evaluation_strategy="epoch",
+        #evaluation_strategy="epoch",
         save_strategy="epoch",
-        load_best_model_at_end=True,
+        #load_best_model_at_end=True,
         push_to_hub=False,
     )
     dataset = {"path": "hugdataset.py", "version": "GOLD"}

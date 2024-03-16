@@ -17,15 +17,12 @@ _HOMEPAGE = ""
 
 _LICENSE = ""
 
-
 _IMAGES_URLS = {
-    "train": "",
-    "validation": "",
+    # TODO Maybe URLS to different versions of the dataset
 }
-#https://cs.stanford.edu/people/karpathy/deepimagesent/caption_datasets.zip
-_KARPATHY_FILES_URL = "" # TODO Here comes the link to the annotation file
-
-_SPLIT_MAP = {"train": "train2014", "validation": "val2014"}
+_ANNOTATION_FILES_URL = {
+    # TODO URLS to different annotation files of the dataset
+}
 
 _FEATURES = datasets.Features(
     {
@@ -52,7 +49,9 @@ class FireDetDataset(datasets.GeneratorBasedBuilder):
 
     BUILDER_CONFIGS = [
         datasets.BuilderConfig(
-            name="GOLD", version=VERSION, description="Manually created dataset for detecting fires, vehicles and people from above."
+            name="GOLD",
+            version=VERSION,
+            description="Manually created dataset for detecting fires, vehicles and people from above."
         ),
         datasets.BuilderConfig(
             name="SILVER",
@@ -73,8 +72,12 @@ class FireDetDataset(datasets.GeneratorBasedBuilder):
         )
 
     def _split_generators(self, dl_manager):
-        annotation_file = Path("/home/nex/Bilder/Datasets/golddataset/original_images.json")
+        # TODO make this downloadable from huggingface with dl_manager
         #
+        train_ann = "/home/nex/Bilder/Datasets/golddataset/annotation/split/train.json"
+        val_ann = "/home/nex/Bilder/Datasets/golddataset/annotation/split/val.json"
+        test_ann = "/home/nex/Bilder/Datasets/golddataset/annotation/split/test.json"
+
         img_files_list = list(Path("/home/nex/Bilder/Datasets/golddataset/images").rglob("*.jpg"))
         image_folders = "/home/nex/Bilder/Datasets/golddataset/images"
 
@@ -82,14 +85,27 @@ class FireDetDataset(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(
                 name=datasets.Split.TRAIN,
                 gen_kwargs={
-                    "annotation_file": annotation_file,
+                    "annotation_file": train_ann,
                     "image_folders": image_folders,
-                    "split_key": "train",
+                },
+            ),
+            datasets.SplitGenerator(
+                name=datasets.Split.VALIDATION,
+                gen_kwargs={
+                    "annotation_file": val_ann,
+                    "image_folders": image_folders,
+                },
+            ),
+            datasets.SplitGenerator(
+                name=datasets.Split.TEST,
+                gen_kwargs={
+                    "annotation_file": test_ann,
+                    "image_folders": image_folders,
                 },
             ),
         ]
 
-    def _generate_examples(self, annotation_file, image_folders, split_key="train"):
+    def _generate_examples(self, annotation_file, image_folders):
         with open(annotation_file, "r", encoding="utf-8") as fi:
             annotations = json.load(fi)
         # Initialize an empty dictionary to store the hashmap
@@ -108,20 +124,6 @@ class FireDetDataset(datasets.GeneratorBasedBuilder):
             # Append the current entry to the list associated with this image_id
             image_id_map[image_id].append(entry)
         for image_metadata in annotations["images"]:
-            #     if split_key == "train":
-            #         if image_metadata["split"] != "train" and image_metadata["split"] != "restval":
-            #             continue
-            #     elif split_key == "validation":
-            #         if image_metadata["split"] != "val":
-            #             continue
-            #     elif split_key == "test":
-            #         if image_metadata["split"] != "test":
-            #             continue
-
-            # if "val2014" in image_metadata["filename"]:
-            #     image_path = image_folders["validation"] / _SPLIT_MAP["validation"]
-            # else:
-            #     image_path = image_folders["train"] / _SPLIT_MAP["train"]
 
             img_id = image_metadata['id']
             objects = image_id_map[img_id]
