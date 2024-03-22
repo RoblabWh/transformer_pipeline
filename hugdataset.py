@@ -11,6 +11,7 @@ _CITATION = """
 """
 
 _DESCRIPTION = """
+
 """
 
 _HOMEPAGE = ""
@@ -147,40 +148,3 @@ class FireDetDataset(datasets.GeneratorBasedBuilder):
             }
 
             yield record["image_id"], record
-
-    # def _generate_examples(self, annotation_file, image_folders, split_key):
-    #     with open(annotation_file, "r", encoding="utf-8") as fi:
-    #         annotations = json.load(fi)
-    #
-    #         for image_metadata in annotations["images"]:
-    #             if split_key == "train":
-    #                 if image_metadata["split"] != "train" and image_metadata["split"] != "restval":
-    #                     continue
-    #             elif split_key == "validation":
-    #                 if image_metadata["split"] != "val":
-    #                     continue
-    #             elif split_key == "test":
-    #                 if image_metadata["split"] != "test":
-    #                     continue
-    #
-    #             if "val2014" in image_metadata["filename"]:
-    #                 image_path = image_folders["validation"] / _SPLIT_MAP["validation"]
-    #             else:
-    #                 image_path = image_folders["train"] / _SPLIT_MAP["train"]
-    #
-    #             image_path = image_path / image_metadata["filename"]
-    #
-    #             record = {
-    #                 "image": str(image_path.absolute()),
-    #                 "filepath": image_metadata["filename"],
-    #                 "sentids": image_metadata["sentids"],
-    #                 "filename": image_metadata["filename"],
-    #                 "imgid": image_metadata["imgid"],
-    #                 "split": image_metadata["split"],
-    #                 "cocoid": image_metadata["cocoid"],
-    #                 "sentences_tokens": [caption["tokens"] for caption in image_metadata["sentences"]],
-    #                 "sentences_raw": [caption["raw"] for caption in image_metadata["sentences"]],
-    #                 "sentences_sentid": [caption["sentid"] for caption in image_metadata["sentences"]],
-    #             }
-    #
-    #             yield record["imgid"], record

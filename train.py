@@ -4,7 +4,13 @@ import numpy as np
 
 from transformers import TrainingArguments
 from transformers import Trainer
+from transformers import AutoModel
+
 from datasets import load_dataset
+
+from accelerate import Accelerator
+from torch.utils.data.dataloader import DataLoader
+
 
 # TODO must do: export CUDA_VISIBLE_DEVICES=1
 class UniversalTrainer(object):
@@ -33,8 +39,8 @@ class UniversalTrainer(object):
         # dataset = dataset.train_test_split(test_size=0.2)
 
         # Delete the bad bboxes from the dataset
-        keep = [i for i in range(len(self.dataset["train"])) if i != 1948]  # TODO this is a dirty fix, better check this
-        self.dataset["train"] = self.dataset["train"].select(keep)          # TODO on dataset creation
+        # keep = [i for i in range(len(self.dataset["train"])) if i != 1948]  # TODO this is a dirty fix, better check this
+        # self.dataset["train"] = self.dataset["train"].select(keep)          # TODO on dataset creation
 
         # Create maps for the labels and ids
         labels = self.dataset["train"].features["objects"].feature["category"].names
@@ -52,6 +58,7 @@ class UniversalTrainer(object):
             model=self.model,
             args=self.args,
             train_dataset=self.dataset["train"],
+            #eval_dataset=self.dataset["validation"],
             tokenizer=self.image_processor,
             data_collator=self.collate_fn,
             # compute_metrics=compute_metrics,
@@ -102,22 +109,45 @@ class UniversalTrainer(object):
 
 if __name__ == "__main__":
 
+    # Couldn't observe differences on either trainingspeed or memoryusage with:
+    # fp16
+
+    # Further look into:
+    # https://huggingface.co/docs/peft/index
+
+    # Accelerate
+    # model = AutoModel.from_pretrained(checkpoint)
+
+    # Multi GPU
+    # https://huggingface.co/docs/transformers/perf_train_gpu_many
+
     checkpoint = "SenseTime/deformable-detr"
     training_args = TrainingArguments(
-        output_dir="test_detr1",
+        output_dir="test_detr",
         remove_unused_columns=False,
-        fp16=True,
-        learning_rate=2e-5,
-        per_device_train_batch_size=6,
-        per_device_eval_batch_size=6,
-        num_train_epochs=40,
+        #fp16=True,
+        learning_rate=2e-4, # maybe 2e-3
+        per_device_train_batch_size=4,
+        per_device_eval_batch_size=5,
+        num_train_epochs=600,
         weight_decay=0.01,
         #evaluation_strategy="epoch",
         save_strategy="epoch",
-        #load_best_model_at_end=True,
+        save_total_limit=4,
+        load_best_model_at_end=False,
         push_to_hub=False,
+        gradient_accumulation_steps=16,
+        dataloader_num_workers=40,
+        #torch_compile=True,
+        optim="adamw_torch_fused",
+        #torch_compile_backend=_dynamo.optimize("inductor"),
     )
+
     dataset = {"path": "hugdataset.py", "version": "GOLD"}
+    dataloader = DataLoader(dataset, batch_size=training_args.per_device_train_batch_size)
+
+    trainer = UniversalTrainer(checkpoint, training_args, dataset)
+
     trainer = UniversalTrainer(checkpoint, training_args, dataset)
     trainer.train()
 
