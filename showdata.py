@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Image", 800, 600)
-    print("Press 'n' for next image, 'p' for previous image, or 'q' to quit: ")
+    print("Press '->' for next image, '<-' for previous image, or 'q' to quit: ")
 
     while True:
         idx = idxs[current_index]
@@ -33,17 +33,15 @@ if __name__ == "__main__":
         cv2.imshow("Image", boxed_image)
         key = cv2.waitKey(0)
 
-        if key == ord('n'):
+        if key == 83:
             if current_index < samples - 1:
                 current_index += 1
             else:
                 print("This is the last image.")
-        elif key == ord('p'):
+        elif key == 81:
             if current_index > 0:
                 current_index -= 1
             else:
                 print("This is the first image.")
         elif key == ord('q'):
             break
-        else:
-            print("Invalid input, please press 'n', 'p', or 'q'.")

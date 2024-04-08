@@ -1,8 +1,6 @@
 import json
 import cv2
-import copy
 import numpy as np
-from pathlib import Path
 
 
 def empty_coco_ann():
@@ -116,6 +114,7 @@ def delete_from_json_images(json_file, img_names):
 
     delete_from_json_annotation(json_file, deleted_ids)
 
+
 def delete_images_from_json(json_file, images):
     """
     A function that deletes images from a json file.
@@ -132,6 +131,7 @@ def delete_images_from_json(json_file, images):
     data['images'] = new_images
     with open(json_file, 'w') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
+
 
 def delete_from_json_annotation(json_file, annotation):
     """
@@ -160,72 +160,6 @@ def group_annotations_by_image(annotations):
     return grouped_annotations
 
 
-def update_annotations(coco_data, new_images, intersection_threshold=0.15):
-    """
-    A function that updates the annotations of a COCO dataset normally called after the dataset was splitted.
-    :param coco_data: loaded JSON file of a COCO dataset in a dictionary
-    :param new_images: list of images to add that where created by splitting the original images
-                       [("00000_1.jpg", x1, y1, width1, height1), ...]
-    :return: new COCO dataset
-    """
-    new_annotations = []
-    new_images_data = []
-    starting_image_id = len(coco_data["images"])
-    starting_annotation_id = len(coco_data["annotations"])
-
-    for new_image_name, x, y, width, height in new_images:
-        # Find the original image ID by its file name
-        original_image_id = None
-        for i, image in enumerate(coco_data["images"]):
-            filename = ""
-            for s in Path(new_image_name).stem.split("_")[:-1]:
-                filename += s + "_"
-            filename = filename[:-1]
-            if Path(coco_data["images"][i]["file_name"]).stem == filename:
-                original_image_id = image["id"]
-                break
-
-        if original_image_id is None:
-            print(f"Original image not found for {new_image_name}")
-            continue
-
-        # Create new image data entry
-        new_image_data = copy.deepcopy(image)
-        new_image_data["file_name"] = new_image_name
-        new_image_data["id"] = starting_image_id + len(new_images_data) + 1
-        new_image_data["width"] = width
-        new_image_data["height"] = height
-        new_images_data.append(new_image_data)
-
-        # Update the annotations for the new image
-        for annotation in coco_data["annotations"]:
-            if annotation["image_id"] == original_image_id:
-                new_annotation = copy.deepcopy(annotation)
-                new_annotation["id"] = starting_annotation_id + len(new_annotations) + 1
-                new_annotation["image_id"] = new_image_data["id"]
-
-                # Update the bounding box coordinates
-                old_x, old_y, old_w, old_h = new_annotation["bbox"]
-                new_x = max(0, old_x - x)
-                new_y = max(0, old_y - y)
-                new_w = min(width - new_x, min(old_w, old_x + old_w - x))
-                new_h = min(height - new_y, min(old_h, old_y + old_h - y))
-
-                # Check if the bounding box intersects the new image by more than the threshold
-                # That's not exactly using old_x and old_y here, but shouldn't be a broblem
-                intersection_ratio = calc_iou([old_x, old_y, new_w, new_h], new_annotation['bbox'])
-
-                if intersection_ratio >= intersection_threshold:
-                    new_annotation["bbox"] = [new_x, new_y, new_w, new_h]
-                    new_annotations.append(new_annotation)
-
-    # Update the COCO data with the new image data and annotations
-    coco_data["images"] = new_images_data
-    coco_data["annotations"] = new_annotations
-
-    return coco_data
-
-
 def calc_iou(bbox1, bbox2):
     """
     Calculates the IoU for two bounding boxes
@@ -249,40 +183,3 @@ def calc_iou(bbox1, bbox2):
         iou = inter / union
 
     return iou
-
-
-def split_image(image):
-    """
-    Splits the image if it's too large, recursively checks if the new images are too large, too.
-    :param image: image to split
-    :return: list of images along with their coordinates in the original image
-    """
-    h, w = image.shape[:2]
-    if h > 1200 or w > 1200:
-        image_coordinates = split_image_into_four(image)
-        new_images = []
-        for img, x, y in image_coordinates:
-            for sub_img, sub_x, sub_y in split_image(img):
-                new_images.append((sub_img, x + sub_x, y + sub_y))
-        return new_images
-    else:
-        return [(image, 0, 0)]
-
-
-def split_image_into_four(image):
-    """
-    Splits a large image into four smaller ones.
-    :param image: large image
-    :return: list of four smaller images along with their coordinates in the original image
-    """
-    h, w = image.shape[:2]
-    overlap = 0
-    h2 = h // 2
-    w2 = w // 2
-
-    return [
-        (image[:h2 + overlap, :w2 + overlap], 0, 0),
-        (image[:h2 + overlap, w2 - overlap:], w2 - overlap, 0),
-        (image[h2 - overlap:, :w2 + overlap], 0, h2 - overlap),
-        (image[h2 - overlap:, w2 - overlap:], w2 - overlap, h2 - overlap),
-    ]

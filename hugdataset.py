@@ -79,8 +79,7 @@ class FireDetDataset(datasets.GeneratorBasedBuilder):
         val_ann = "/home/nex/Bilder/Datasets/golddataset/annotation/split/val.json"
         test_ann = "/home/nex/Bilder/Datasets/golddataset/annotation/split/test.json"
 
-        img_files_list = list(Path("/home/nex/Bilder/Datasets/golddataset/images").rglob("*.jpg"))
-        image_folders = "/home/nex/Bilder/Datasets/golddataset/images"
+        image_folders = "/home/nex/Bilder/Datasets/golddataset/images/"
 
         return [
             datasets.SplitGenerator(

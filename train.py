@@ -121,15 +121,19 @@ if __name__ == "__main__":
     # Multi GPU
     # https://huggingface.co/docs/transformers/perf_train_gpu_many
 
+    # LR 2e-3 batchsize=4; gradient_acc= 16
+    # {'train_runtime': 468540.382, 'train_samples_per_second': 6.905, 'train_steps_per_second': 0.108, 'train_loss': 2.926033954923115, 'epoch': 1196.44}
+    # very bad - no detection
+
     checkpoint = "SenseTime/deformable-detr"
     training_args = TrainingArguments(
-        output_dir="test_detr",
+        output_dir="detr_tr2e5",
         remove_unused_columns=False,
         #fp16=True,
-        learning_rate=2e-4, # maybe 2e-3
+        learning_rate=1e-5, # 1e-5 worked good
         per_device_train_batch_size=4,
         per_device_eval_batch_size=5,
-        num_train_epochs=600,
+        num_train_epochs=1200,
         weight_decay=0.01,
         #evaluation_strategy="epoch",
         save_strategy="epoch",

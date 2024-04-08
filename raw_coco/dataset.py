@@ -4,6 +4,7 @@ import json
 from tqdm import tqdm
 from pathlib import Path
 import random
+import copy
 import numpy as np
 import shutil
 import utils as u
@@ -21,6 +22,7 @@ class Dataset:
         :param img_folder: Path to the folder containing the images
         :param ann_file: Path to the annotation file
         """
+        self.image_paths = None
         self.img_folder = Path(img_folder)
         self.ann_file = Path(ann_file)
 
@@ -369,6 +371,71 @@ class Dataset:
                     # cv2.imwrite(os.path.join(save_path, gt), img)
                     cv2.imwrite(os.path.join(save_path, self.images[img_id]), img)
 
+    def update_annotations(self, coco_data, new_images, intersection_threshold=0.15):
+        """
+        A function that updates the annotations of a COCO dataset normally called after the dataset was splitted.
+        :param coco_data: loaded JSON file of a COCO dataset in a dictionary
+        :param new_images: list of images to add that where created by splitting the original images
+                           [("00000_1.jpg", x1, y1, width1, height1), ...]
+        :return: new COCO dataset
+        """
+        new_annotations = []
+        new_images_data = []
+        starting_image_id = len(coco_data["images"])
+        starting_annotation_id = len(coco_data["annotations"])
+
+        for new_image_name, x, y, width, height in new_images:
+            # Find the original image ID by its file name
+            original_image_id = None
+            for i, image in enumerate(coco_data["images"]):
+                filename = ""
+                for s in Path(new_image_name).stem.split("_")[:-1]:
+                    filename += s + "_"
+                filename = filename[:-1]
+                if Path(coco_data["images"][i]["file_name"]).stem == filename:
+                    original_image_id = image["id"]
+                    break
+
+            if original_image_id is None:
+                print(f"Original image not found for {new_image_name}")
+                continue
+
+            # Create new image data entry
+            new_image_data = copy.deepcopy(image)
+            new_image_data["file_name"] = new_image_name
+            new_image_data["id"] = starting_image_id + len(new_images_data) + 1
+            new_image_data["width"] = width
+            new_image_data["height"] = height
+            new_images_data.append(new_image_data)
+
+            # Update the annotations for the new image
+            for annotation in coco_data["annotations"]:
+                if annotation["image_id"] == original_image_id:
+                    new_annotation = copy.deepcopy(annotation)
+                    new_annotation["id"] = starting_annotation_id + len(new_annotations) + 1
+                    new_annotation["image_id"] = new_image_data["id"]
+
+                    # Update the bounding box coordinates
+                    old_x, old_y, old_w, old_h = new_annotation["bbox"]
+                    new_x = max(0, old_x - x)
+                    new_y = max(0, old_y - y)
+                    new_w = min(width - new_x, min(old_w, old_x + old_w - x))
+                    new_h = min(height - new_y, min(old_h, old_y + old_h - y))
+
+                    # Check if the bounding box intersects the new image by more than the threshold
+                    # That's not exactly using old_x and old_y here, but shouldn't be a broblem
+                    intersection_ratio = u.calc_iou([old_x, old_y, new_w, new_h], new_annotation['bbox'])
+
+                    if intersection_ratio >= intersection_threshold:
+                        new_annotation["bbox"] = [new_x, new_y, new_w, new_h]
+                        new_annotations.append(new_annotation)
+
+        # Update the COCO data with the new image data and annotations
+        coco_data["images"] = new_images_data
+        coco_data["annotations"] = new_annotations
+
+        return coco_data
+
     def generate_small_dataset(self, new_data_folder):
         """
         This method takes this dataset, cuts each image into smaller ones, if necessary,
@@ -433,7 +500,7 @@ class Dataset:
                 new_images.append(new_image)
                 cv2.imwrite(str(new_img_folder / (image_path.stem + f'_{0}' + image_path.suffix)), img)
 
-        new_coco_data = u.update_annotations(self.annotations, new_images)
+        new_coco_data = self.update_annotations(new_images)
         # Save the modified annotations to a new JSON file
         with open(os.path.join(new_data_folder, "modified_annotations.json"), "w") as f:
             json.dump(new_coco_data, f, indent=2)

@@ -1,57 +1,49 @@
-from transformers import pipeline
-from datasets import load_dataset
-import utils as u
-import numpy as np
-import os
-from pathlib import Path
-import cv2
+import argparse
+from datahandler import DataHandler
+# from annotationhandler import AnnotationHandler
+from inference_engine import Inferencer
 
 
-def get_image_paths(folder):
-    image_paths = []
+def main(args):
+    datahandler = DataHandler(args)
+    inferencer = Inferencer(args.checkpoints, args.score_thr)
 
-    for root, dirs, files in os.walk(folder):
-        for file in files:
-            if file.lower().endswith(('.png', '.jpg', '.jpeg')):
-                image_paths.append(os.path.join(root, file))
+    data = datahandler.get_data()
+    results = inferencer(data)
 
-    return image_paths
-
-
-def main():
-    datasetpath = Path.joinpath(Path(__file__).parent.parent, 'hugdataset.py')
-    ds = load_dataset(path=str(datasetpath), name="GOLD")
-    subset = 'test'
-    obj_detector = pipeline("object-detection", model="new_test/checkpoint-107460")
-
-    random_indices = np.random.choice(len(ds[subset]), 10, replace=False)
-    images = ds[subset].select(random_indices)['image']
-    results = obj_detector(images, threshold=0.3)
-
-    cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Image", 800, 600)
-
-    for i, img in enumerate(images):
-        if not results[i]:
-            continue
-
-        cv_img = np.array(img)
-        image = cv2.cvtColor(cv_img, cv2.COLOR_RGB2BGR)
-
-        for detection in results[i]:
-            score = detection["score"]
-            label = detection["label"]
-            box = [round(i, 2) for i in detection["box"].values()]
-            print(
-                f"Detected {label} with confidence "
-                f"{round(score, 3)} at location {box}"
-            )
-
-        boxxed_img = u.draw_bboxes(image, [detection["box"] for detection in results[i]], [detection["label"] for detection in results[i]], True)
-
-        cv2.imshow("Image", boxxed_img)
-        cv2.waitKey(0)
+    result = datahandler.get_results(results)
+    if args.show:
+        datahandler.show(result)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Inference for Huggingface Transformers and COCO Datasets')
+
+    # Use images on disk for inference
+    parser.add_argument('--inputfolder', default=str, help='Input folder that is searched')
+    parser.add_argument('--checkpoints', default=str, nargs='+', help='Checkpoints for Models to use for inference')
+
+    # Use huggingface dataset for inference
+    parser.add_argument('--dataset', default=None, type=str, help='Dataset to use for inference')
+    parser.add_argument('--dataset_name', default='GOLD', type=str, help='Name of the Dataset to use for inference')
+    parser.add_argument('--subset', default='train', help='Subset of the Dataset to use for inference')
+    parser.add_argument('--num_images', default=5, type=int, help='Number of images to use for inference')
+
+    parser.add_argument('--outputfolder', type=str, nargs='+', default='.', help='Outputfolder everything get\'s saved in')
+    parser.add_argument('--extensions', type=str, nargs='+', default=['.jpg', '.png'], help='File extensions that are searched for')
+    parser.add_argument('--pattern', default='.', help='Regex Pattern for input images')
+    parser.add_argument('--include_subdirs', default=argparse.BooleanOptionalAction, help='Searches images additionally in all subdirs of input_folder (default: False)')
+    parser.add_argument('--score_thr', default=0.5, help='Threshold for BBox Detection (default: 0.5)')
+    parser.add_argument('--show', default=argparse.BooleanOptionalAction, help='Show the results (default: False)')
+    parser.add_argument('--print_results', default=argparse.BooleanOptionalAction, help='Print results to console (default: False)')
+
+    # Image manipulation
+    parser.add_argument('--split', action=argparse.BooleanOptionalAction, help='Split images into tiles fore more precise detection (default: False)')
+    parser.add_argument('--max_splitting_steps', default=1, help='Maximum number of splitting steps, splits into 4 images each time (default: 1)')
+
+    # possibly unused
+    parser.add_argument('--batch_size', default=5, help='Batch size for Model (default: 5)')
+    parser.add_argument('--create_coco', default=argparse.BooleanOptionalAction, help='Create coco annotation file with the results from the inference')
+
+    args = parser.parse_args()
+    main(args)
