@@ -147,7 +147,7 @@ if __name__ == "__main__":
         #torch_compile_backend=_dynamo.optimize("inductor"),
     )
 
-    dataset = {"path": "hugdataset.py", "version": "GOLD"}
+    dataset = {"path": "firedetdataset.py", "version": "GOLD"}
     dataloader = DataLoader(dataset, batch_size=training_args.per_device_train_batch_size)
 
     trainer = UniversalTrainer(checkpoint, training_args, dataset)

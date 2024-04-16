@@ -183,3 +183,28 @@ def calc_iou(bbox1, bbox2):
         iou = inter / union
 
     return iou
+
+
+def to_xywh(_bbox):
+    return [
+        _bbox['xmin'],
+        _bbox['ymin'],
+        _bbox['xmax'] - _bbox['xmin'],
+        _bbox['ymax'] - _bbox['ymin'],
+    ]
+
+
+def to_xyxy(bbox):
+    return {
+        'xmin': bbox[0],
+        'ymin': bbox[1],
+        'xmax': bbox[0] + bbox[2],
+        'ymax': bbox[1] + bbox[3]
+    }
+
+def to_dict(bbox, label, score):
+    return {
+        'box': to_xyxy(bbox),
+        'label': label,
+        'score': score
+    }

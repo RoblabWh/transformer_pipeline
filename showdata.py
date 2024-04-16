@@ -1,7 +1,6 @@
 from datasets import load_dataset
 import cv2
 import numpy as np
-import random
 import utils as u
 
 
@@ -15,12 +14,13 @@ def show_image_with_boxes(index, subset_, show_classes=True):
 
 
 if __name__ == "__main__":
-    ds = load_dataset("hugdataset.py", "GOLD")
+    ds = load_dataset("RoblabWhGe/FireDetDataset", token=True, trust_remote_code=True)
     subset = 'validation'
     current_index = 0
-    total_images = len(ds[subset])  # Assuming 'ds' has this attribute
+    total_images = len(ds[subset])
+
     # sample images
-    samples = 10
+    samples = total_images
     idxs = np.random.choice(np.arange(total_images), samples, replace=False).tolist()
 
     cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
@@ -37,11 +37,13 @@ if __name__ == "__main__":
             if current_index < samples - 1:
                 current_index += 1
             else:
-                print("This is the last image.")
+                #print("This was the last image, next image will be first in this dataset.")
+                current_index = 0
         elif key == 81:
             if current_index > 0:
                 current_index -= 1
             else:
-                print("This is the first image.")
+                #print("This was the first image, next image will be the last in this dataset.")
+                current_index = samples - 1
         elif key == ord('q'):
             break

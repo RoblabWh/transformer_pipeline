@@ -8,6 +8,7 @@ from pathlib import Path
 from splitter import Splitter
 from merger import Merger
 from utils import draw_bboxes
+from annotationhandler import AnnotationHandler
 
 
 class DataHandler(object):
@@ -29,6 +30,7 @@ class DataHandler(object):
                 self.preprocess(max_splitting_steps=args.max_splitting_steps)
             else:
                 self.preprocess()
+        self.annotationhandler = AnnotationHandler(args, self.image_paths, self.images)
 
     def setup_args(self, args):
         default_args = {
@@ -57,7 +59,8 @@ class DataHandler(object):
     def setup_dataset_images(self):
         if self.args.dataset is not None:
             from datasets import load_dataset
-            dataset = load_dataset(path=str(self.args.dataset), name=str(self.args.dataset_name))
+            print(f"Loading dataset {self.args.dataset_name} from {self.args.dataset}...")
+            dataset = load_dataset(path=str(self.args.dataset), name=str(self.args.dataset_name), trust_remote_code=True)
             subset = dataset[self.args.subset]
             if hasattr(self.args, 'num_images') and self.args.num_images:
                 random_indices = np.random.choice(len(subset), self.args.num_images, replace=False)
@@ -73,9 +76,9 @@ class DataHandler(object):
     def setup_image_paths(self):
         if not self.source_is_huggingface():
             image_paths = self.get_image_paths()
+            image_paths.sort(key=lambda x: x.name)
         else:
-            image_paths = [Path(_) for _ in self.dataset[self.indices]['filepath']]
-        image_paths.sort(key=lambda x: x.name)
+            image_paths = [Path(_) for _ in self.dataset[self.indices]['filename']]
         return image_paths
 
     def source_is_huggingface(self):
@@ -110,6 +113,7 @@ class DataHandler(object):
         self.image_paths = image_paths
         self.image_paths.sort(key=lambda x: x.name)
         self.img_prefix = str(Path(image_paths[0]).expanduser().parent)
+        self.annotationhandler.update_ann_file(self.image_paths, self.images)
 
     def get_image_paths(self):
         if self.dataset is None:
@@ -154,7 +158,7 @@ class DataHandler(object):
 
         return merged_results
 
-    def get_results(self, inference_results):
+    def postprocess_results(self, inference_results):
         """
         Returns the results of the inference after merging split images and/or multiple models.
         :param inference_results: results from the inference
@@ -163,6 +167,7 @@ class DataHandler(object):
         results = copy.deepcopy(inference_results)
         if self.args.split:
             results = self.postprocess(results)
+            self.annotationhandler.update_ann_file(self.image_paths, self.images)
 
         merged_bboxes = self.merger.merge_bboxes(results)
 
@@ -207,6 +212,10 @@ class DataHandler(object):
 
             cv2.imshow("Image", boxxed_img)
             cv2.waitKey(0)
+
+    def save_annotation(self, result):
+        if self.args.create_coco:
+            self.annotationhandler.save_results_in_json(result)
 
 
 

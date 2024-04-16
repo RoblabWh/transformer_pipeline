@@ -65,7 +65,7 @@ class Splitter(object):
 
             self.split_images[image_path] = ids
 
-        new_image_paths.sort(key=lambda x: x.name)
+        #new_image_paths.sort(key=lambda x: x.name)
 
         return new_image_paths
 
@@ -112,7 +112,7 @@ class Splitter(object):
         for key in keys_to_add:
             new_image_paths.append(key)
 
-        new_image_paths.sort(key=lambda x: x.name)
+        #new_image_paths.sort(key=lambda x: x.name)
         return new_image_paths
 
     def get_split_images(self):

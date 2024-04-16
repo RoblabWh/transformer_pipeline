@@ -1,7 +1,7 @@
 import copy
 import itertools
 import numpy as np
-from utils import calc_iou
+from utils import calc_iou, to_xywh, to_xyxy, to_dict
 
 
 class Merger(object):
@@ -36,7 +36,7 @@ class Merger(object):
                 for i, id in enumerate(ids):
                     img_results = result[id]
                     for img_result in img_results:
-                        bbox = self.to_xywh(img_result['box'])
+                        bbox = to_xywh(img_result['box'])
                         #bbox = [val for val in img_result['box'].values()]
                         bboxes[i].append(bbox)
                         labels.append(img_result['label'])
@@ -46,35 +46,12 @@ class Merger(object):
                 # add the merged results to the new results
                 picture_results = []
                 for r in range(len(merged_bbox)):
-                    picture_results.append(self.to_dict(merged_bbox[r], labels[r], scores[r]))
+                    picture_results.append(to_dict(merged_bbox[r], labels[r], scores[r]))
                 merged_results[net_num].append(picture_results)
                 if net_num == last_net:
                     keys_to_add.append(key)
 
         return merged_results, keys_to_add
-
-    def to_xywh(self, _bbox):
-        return [
-            _bbox['xmin'],
-            _bbox['ymin'],
-            _bbox['xmax'] - _bbox['xmin'],
-            _bbox['ymax'] - _bbox['ymin'],
-        ]
-
-    def to_xyxy(self, bbox):
-        return {
-            'xmin': bbox[0],
-            'ymin': bbox[1],
-            'xmax': bbox[0] + bbox[2],
-            'ymax': bbox[1] + bbox[3]
-        }
-
-    def to_dict(self, bbox, label, score):
-        return {
-            'box': self.to_xyxy(bbox),
-            'label': label,
-            'score': score
-        }
 
     def merge_images(self, key, bboxes, ids, split_images_):
         """
@@ -96,7 +73,6 @@ class Merger(object):
             collapse = []
             for i, pair in enumerate(pairs):
                 pairboxes = [bboxes[j] for j in id_pairs[i]]
-                # from here on out we use numpy arrays #TODO switch earlier?
                 _bboxes = self.merge_results_of_four(key, pairboxes, pair, split_images_)
                 new_bboxes.append(_bboxes)
                 new_pairs.append(i)
@@ -164,7 +140,7 @@ class Merger(object):
         # Iterate over all images
         for img_idx in range(num_images):
             # Get every bbox for this image
-            bboxes = [[self.to_xywh(instance['box']) for instance in results[net_idx][img_idx]] for net_idx in range(net_cnt)]
+            bboxes = [[to_xywh(instance['box']) for instance in results[net_idx][img_idx]] for net_idx in range(net_cnt)]
             labels = [[instance['label'] for instance in results[net_idx][img_idx]] for net_idx in range(net_cnt)]
             scores = [[instance['score'] for instance in results[net_idx][img_idx]] for net_idx in range(net_cnt)]
 
@@ -193,7 +169,7 @@ class Merger(object):
                                 score = (score_a + score_b) / 2
                                 found, _idx = self.found_previously(bbox_a, new_bboxes[class_idx])
                                 if not found:
-                                    new_bbox = {'box': self.to_xyxy(bbox), 'label': list(map.keys())[list(map.values()).index(class_idx)], 'score': score}
+                                    new_bbox = {'box': to_xyxy(bbox), 'label': list(map.keys())[list(map.values()).index(class_idx)], 'score': score}
                                     new_bboxes[class_idx].append(new_bbox)
             # Flatten again
             new_bboxes = list(itertools.chain.from_iterable(new_bboxes))
@@ -202,7 +178,7 @@ class Merger(object):
 
     def found_previously(self, bbox, bboxes):
         for idx, existing_bbox in enumerate(bboxes):
-            iou = calc_iou(bbox, self.to_xywh(existing_bbox['box']))
+            iou = calc_iou(bbox, to_xywh(existing_bbox['box']))
             if iou > 0.05:
                 return True, idx
         return False, None
