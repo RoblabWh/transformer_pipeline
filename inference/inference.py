@@ -20,14 +20,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Inference for Huggingface Transformers and COCO Datasets')
 
     # Use images on disk for inference
-    parser.add_argument('--inputfolder', default=str, help='Input folder that is searched')
+    parser.add_argument('--inputfolder', type=str, help='Input folder that is searched')
     parser.add_argument('--checkpoints', default=str, nargs='+', help='Checkpoints for Models to use for inference')
 
     # Use huggingface dataset for inference
     parser.add_argument('--dataset', default=None, type=str, help='Dataset to use for inference')
     parser.add_argument('--dataset_name', default='GOLD', type=str, help='Name of the Dataset to use for inference')
-    parser.add_argument('--subset', default='train', help='Subset of the Dataset to use for inference')
-    parser.add_argument('--num_images', default=2, type=int, help='Number of images to use for inference')
+    parser.add_argument('--subset', default='test', help='Subset of the Dataset to use for inference')
+    parser.add_argument('--num_images', default=20, type=int, help='Number of images to use for inference')
 
     parser.add_argument('--outputfolder', type=str, nargs='+', default='.', help='Outputfolder everything get\'s saved in')
     parser.add_argument('--extensions', type=str, nargs='+', default=['.jpg', '.png'], help='File extensions that are searched for')
