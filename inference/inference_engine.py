@@ -1,10 +1,11 @@
-import os
-from typing import Union
+from typing import Optional, Union
 from transformers import pipeline
+import warnings
+
 
 class Inferencer(object):
 
-    def __init__(self, checkpoints: Union[str, list], score_thr):
+    def __init__(self, checkpoints: Optional[Union[str, list]] = None, score_thr: Optional[float] = 0.5):
         """
         The InferenceEngine class is used to run the inference of a MMDetection Net on a folder of images.
 
@@ -15,19 +16,30 @@ class Inferencer(object):
             checkpoints = [checkpoints]
 
         self.checkpoints = checkpoints
-        self.models = [self.load_model(checkpoint) for checkpoint in checkpoints]
+
+        if self.checkpoints is None:
+            warnings.warn("No checkpoints provided. Please add a checkpoint to the inference engine.", UserWarning, stacklevel=2)
+            self.models = []
+            self.checkpoints = []
+        else:
+            self.models = [self.__load_model(checkpoint) for checkpoint in checkpoints]
+
         self.score_thr = score_thr
 
-    def load_model(self, checkpoint):
+    def which_models_are_available(self):
+        """
+        Returns the models which are currently available.
+        :return: List of models as strings
+        """
+        return ["RoblabWhGe/rescuedet-deformable-detr"]
+
+    def __load_model(self, checkpoint):
         """
         Loads a model from the checkpoint file.
         :param checkpoint: Checkpoint file for Huggingface model
         :return:
         """
-        if not os.path.exists(checkpoint):
-            raise FileNotFoundError(f"Checkpoint file {checkpoint} not found.")
-        else:
-            print(f"Loading model from {checkpoint}")
+        print(f"Loading model from {checkpoint}")
         return pipeline("object-detection", model=checkpoint)
 
     def add_model(self, checkpoint):
@@ -38,7 +50,7 @@ class Inferencer(object):
         :return:
         """
         self.checkpoints.append(checkpoint)
-        self.models.append(self.load_model(checkpoint))
+        self.models.append(self.__load_model(checkpoint))
 
     def remove_model(self, checkpoint: Union[str, int]):
         """

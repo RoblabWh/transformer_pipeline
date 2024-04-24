@@ -11,6 +11,9 @@ from datasets import load_dataset
 from accelerate import Accelerator
 from torch.utils.data.dataloader import DataLoader
 
+_SUPP_MODELS = ["deformable-detr", "yolos-small"]
+_MASK_MODELS = ["deformable-detr"]
+_NOMASK_MODELS = ["yolos-small"]
 
 # TODO must do: export CUDA_VISIBLE_DEVICES=1
 class UniversalTrainer(object):
@@ -54,6 +57,8 @@ class UniversalTrainer(object):
                                                                  label2id=label2id,
                                                                  ignore_mismatched_sizes=True)
 
+        self.modeltype = self.set_modeltype()
+
         self.trainer = Trainer(
             model=self.model,
             args=self.args,
@@ -63,6 +68,15 @@ class UniversalTrainer(object):
             data_collator=self.collate_fn,
             # compute_metrics=compute_metrics,
         )
+
+    def set_modeltype(self):
+        from pathlib import Path
+        modelname = Path(self.model.name_or_path).name
+        if modelname not in _SUPP_MODELS:
+            from warnings import warn
+            warn(f"Model {modelname} is not supported yet and may throw errors, please use one of the following: {_SUPP_MODELS}")
+
+        return modelname
 
     def formatted_anns(self, image_id, category, area, bbox):
         annotations = []
@@ -96,12 +110,27 @@ class UniversalTrainer(object):
 
         return self.image_processor(images=images, annotations=targets, return_tensors="pt")
 
-    def collate_fn(self, batch):
+    def collate_with_mask(self, batch):
         pixel_values = [example["pixel_values"] for example in batch]
         encoding = self.image_processor.pad(pixel_values, return_tensors="pt")
         labels = [example["labels"] for example in batch]
         batch = {"pixel_values": encoding["pixel_values"], "pixel_mask": encoding["pixel_mask"], "labels": labels}
         return batch
+
+    def collate_without_mask(self, batch):
+        pixel_values = [example["pixel_values"] for example in batch]
+        encoding = self.image_processor.pad(pixel_values, return_tensors="pt")
+        labels = [example["labels"] for example in batch]
+        batch = {"pixel_values": encoding["pixel_values"], "labels": labels}
+        return batch
+
+    def collate_fn(self, batch):
+        if self.modeltype in _MASK_MODELS:
+            return self.collate_with_mask(batch)
+        elif self.modeltype in _NOMASK_MODELS:
+            return self.collate_without_mask(batch)
+        else:
+            return self.collate_without_mask(batch)
 
     def train(self):
         self.trainer.train()
@@ -126,13 +155,14 @@ if __name__ == "__main__":
     # very bad - no detection
 
     checkpoint = "SenseTime/deformable-detr"
+    #checkpoint = "hustvl/yolos-small"
     training_args = TrainingArguments(
-        output_dir="detr_tr2e5",
+        output_dir="yolosss",
         remove_unused_columns=False,
         #fp16=True,
         learning_rate=1e-5, # 1e-5 worked good
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=5,
+        per_device_train_batch_size=1,
+        per_device_eval_batch_size=1,
         num_train_epochs=1200,
         weight_decay=0.01,
         #evaluation_strategy="epoch",
@@ -140,19 +170,19 @@ if __name__ == "__main__":
         save_total_limit=4,
         load_best_model_at_end=False,
         push_to_hub=False,
-        gradient_accumulation_steps=16,
-        dataloader_num_workers=40,
+        #gradient_accumulation_steps=16,
+        dataloader_num_workers=8,
         #torch_compile=True,
         optim="adamw_torch_fused",
         #torch_compile_backend=_dynamo.optimize("inductor"),
     )
 
-    dataset = {"path": "firedetdataset.py", "version": "GOLD"}
+    dataset = {"path": "RoblabWhGe/FireDetDataset", "version": "GOLD", "token": True, "trust_remote_code": True}
+    #dataset = load_dataset("RoblabWhGe/FireDetDataset", token=True, trust_remote_code=True)
     dataloader = DataLoader(dataset, batch_size=training_args.per_device_train_batch_size)
 
     trainer = UniversalTrainer(checkpoint, training_args, dataset)
 
-    trainer = UniversalTrainer(checkpoint, training_args, dataset)
     trainer.train()
 
 

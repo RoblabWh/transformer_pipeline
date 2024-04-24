@@ -1,6 +1,5 @@
 from pycocotools.coco import COCO
 from utils import to_xywh
-import json
 
 
 class CustomCOCO(COCO):

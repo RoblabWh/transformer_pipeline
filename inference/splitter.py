@@ -26,7 +26,7 @@ class Splitter(object):
         if image_data is None:
             raise ValueError('No image data set. Use set_image_paths() or use a dataset to set them.')
         if outputfolder is None:
-            raise ValueError('No image prefix set. Use set_image_paths() to set them.')
+            raise ValueError('No outputfolder was set. Use set_image_paths() to set them.')
 
         # Create a new folder for the preprocessed images
         self.preprocessed_img_folder = Path(outputfolder) / 'preprocessed'

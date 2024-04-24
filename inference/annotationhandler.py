@@ -1,10 +1,6 @@
-import numpy as np
-
-from customcoco import CustomCOCO
-from pathlib import Path
+from inference.customcoco import CustomCOCO
 import cv2
 import json
-import os
 
 
 class AnnotationHandler:
@@ -38,6 +34,9 @@ class AnnotationHandler:
         :return: empty annotation file
         """
 
+        if img_names is None and imgs is None:
+            raise ValueError("No images to create annotation file. This is most likely a bug.")
+
         # Get Hight and Width from images
         if imgs is None:
             imgs = [cv2.imread(str(img_name)) for img_name in img_names]
@@ -54,6 +53,18 @@ class AnnotationHandler:
             json.dump(ann, json_ann_file, ensure_ascii=False, indent=4)
 
         return CustomCOCO(ann_file=self.ann_path, score_thr=self.score_thr, keep_coco_format=self.keep_coco_format)
+
+    def get_json(self, results):
+        """
+        Get the annotation in json format
+        :param results: results from the inference
+        :return: json annotation
+        """
+        annotations = self.custom_coco.det2ann(results)
+        with open(self.ann_path) as json_ann_file:
+            ann = json.load(json_ann_file)
+            ann["annotations"] = annotations
+        return ann
 
     def save_results_in_json(self, results):
         """
