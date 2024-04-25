@@ -153,6 +153,9 @@ class DataHandler(object):
     def set_split(self, split):
         self.args.split = split
 
+    def set_ann_path(self, ann_path):
+        self.args.ann_path = ann_path
+
     def __setup_args(self, args):
         """
         Setup the arguments for the DataHandler. If no arguments are given, the default arguments are used.
@@ -160,14 +163,15 @@ class DataHandler(object):
         default_args = {
             'inputfolder': None,
             'extensions': ['.jpg', '.png'],
-            'outputfolder': '.tmpdetoutput',
+            'outputfolder': None,
             'pattern': '',
             'include_subdirs': False,
-            'create_coco': False,
+            'create_coco': True,
+            'ann_path': 'ann.json',
             'dataset': None,
             'split': False,
             'print_results': False,
-            'score_thr': 0.5,
+            'score_thr': 0.4, # Used for filtering in the annotation handler
             'max_splitting_steps': 1
         }
         if args is None:

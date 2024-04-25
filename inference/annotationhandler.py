@@ -7,14 +7,13 @@ class AnnotationHandler:
 
     def __init__(self, args, datahandler_image_names, datahandler_images, keep_coco_format=True):
         self.custom_coco = None
-        self.ann_path = None
         self.config = None
 
         self.CLASSES = ('fire', 'vehicle', 'human')
         self.PALETTE = [(220, 20, 60), (119, 11, 32), (0, 0, 142)]
 
         # Relevant config paths
-        self.ann_path = "ann.json"
+        self.ann_path = "ann.json" if args.ann_path is None else args.ann_path
         self.score_thr = args.score_thr
 
         self.classes = [{"id": 1, "name": "fire"},
