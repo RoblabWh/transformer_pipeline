@@ -1,4 +1,4 @@
-from inference.customcoco import CustomCOCO
+from .customcoco import CustomCOCO
 import cv2
 import json
 

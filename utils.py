@@ -202,6 +202,7 @@ def to_xyxy(bbox):
         'ymax': bbox[1] + bbox[3]
     }
 
+
 def to_dict(bbox, label, score):
     return {
         'box': to_xyxy(bbox),

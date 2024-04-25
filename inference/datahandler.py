@@ -8,10 +8,10 @@ import warnings
 import numpy as np
 from typing import Union
 from pathlib import Path
-from inference.splitter import Splitter
-from inference.merger import Merger
+from .splitter import Splitter
+from .merger import Merger
 from utils import draw_bboxes
-from inference.annotationhandler import AnnotationHandler
+from .annotationhandler import AnnotationHandler
 
 
 class DataHandler(object):
