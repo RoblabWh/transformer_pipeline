@@ -1,0 +1,3 @@
+{
+  "models": ["RoblabWhGe/rescuedet-deformable-detr", "RoblabWhGe/rescuedet-yolos-small"]
+}

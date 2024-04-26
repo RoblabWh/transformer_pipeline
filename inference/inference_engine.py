@@ -1,5 +1,6 @@
 from typing import Optional, Union
 from transformers import pipeline
+from utils import read_json
 import warnings
 import torch
 
@@ -32,7 +33,7 @@ class Inferencer(object):
         Returns the models which are currently available.
         :return: List of models as strings
         """
-        return ["RoblabWhGe/rescuedet-deformable-detr"]
+        return read_json("models.json")['models']
 
     def __load_model(self, checkpoint):
         """
