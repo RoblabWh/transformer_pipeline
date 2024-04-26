@@ -30,6 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_images', default=10, type=int, help='Number of images to use for inference')
 
     parser.add_argument('--outputfolder', type=str, nargs='+', default=None, help='Outputfolder everything get\'s saved in')
+    parser.add_argument('--ann_path', type=str, default=None, help='Path to the annotation file.')
     parser.add_argument('--extensions', type=str, nargs='+', default=['.jpg', '.png'], help='File extensions that are searched for')
     parser.add_argument('--pattern', default='.', help='Regex Pattern for input images')
     parser.add_argument('--include_subdirs', action=argparse.BooleanOptionalAction, help='Searches images additionally in all subdirs of input_folder (default: False)')

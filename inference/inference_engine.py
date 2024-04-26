@@ -1,6 +1,7 @@
 from typing import Optional, Union
 from transformers import pipeline
 import warnings
+import torch
 
 
 class Inferencer(object):
@@ -40,7 +41,8 @@ class Inferencer(object):
         :return:
         """
         print(f"Loading model from {checkpoint}")
-        return pipeline("object-detection", model=checkpoint)
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        return pipeline("object-detection", model=checkpoint, device=device)
 
     def add_model(self, checkpoint):
         """
