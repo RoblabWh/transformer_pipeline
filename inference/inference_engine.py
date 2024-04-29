@@ -1,6 +1,16 @@
 from typing import Optional, Union
-from transformers import pipeline
 from utils import read_json, get_git_root, get_models_json
+
+# Changes Huggingface cache dir when it's loaded as ARGUS submodule
+root = get_git_root(__file__)
+if root.stem != "transformer_pipeline":
+    modelsdir = root.joinpath("models")
+    import os
+    if not os.path.exists(path):
+        os.makedirs(modelsdir)
+    os.environ['HF_HOME'] = str(modelsdir)
+
+from transformers import pipeline
 from pathlib import Path
 import warnings
 import torch
