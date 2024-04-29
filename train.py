@@ -1,5 +1,8 @@
-from transformers import AutoImageProcessor, AutoModelForObjectDetection
+from transformers import AutoImageProcessor, AutoModelForObjectDetection, EvalPrediction
+import torch
+import functools
 import torchvision.transforms.v2 as transforms
+from torchmetrics.detection import MeanAveragePrecision
 import numpy as np
 
 from transformers import TrainingArguments
@@ -39,6 +42,8 @@ class UniversalTrainer(object):
             transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),])
 
         self.dataset["train"] = self.dataset["train"].with_transform(self.transform_aug_ann)
+        #self.dataset["validation"] = self.dataset["validation"].with_transform(self.transform_aug_ann)
+        self.dataset["validation"] = self.dataset["validation"].select([_ for _ in range(10)]).with_transform(self.transform_aug_ann)
         # dataset = dataset.train_test_split(test_size=0.2)
 
         # Delete the bad bboxes from the dataset
@@ -59,14 +64,17 @@ class UniversalTrainer(object):
 
         self.modeltype = self.set_modeltype()
 
+        self.mAP = MeanAveragePrecision(box_format="cxcywh", class_metrics=True)
+        self.metrics = functools.partial(self.compute_metrics, map=self.mAP)
+
         self.trainer = Trainer(
             model=self.model,
             args=self.args,
             train_dataset=self.dataset["train"],
-            #eval_dataset=self.dataset["validation"],
+            eval_dataset=self.dataset["validation"],
             tokenizer=self.image_processor,
             data_collator=self.collate_fn,
-            # compute_metrics=compute_metrics,
+            compute_metrics=self.metrics,
         )
 
     def set_modeltype(self):
@@ -132,6 +140,42 @@ class UniversalTrainer(object):
         else:
             return self.collate_without_mask(batch)
 
+    def compute_metrics(self, eval_pred: EvalPrediction, map: MeanAveragePrecision):
+        print(eval_pred) #TODO HIER WEITERMACHEN
+        (scores, pred_boxes, last_hidden_state, encoder_last_hidden_state), labels = eval_pred
+        print(scores)
+        # scores shape: (batch_size, number of detected anchors, num_classes + 1) last class is the no-object class
+        # pred_boxes shape: (batch_size, number of detected anchors, 4)
+        # https://github.com/openvinotoolkit/open_model_zoo/blob/master/models/public/detr-resnet50/README.md
+        predictions = []
+        for score, box in zip(scores, pred_boxes):
+            # Extract the bounding boxes, labels, and scores from the model's output
+            pred_scores = torch.from_numpy(score[:, :-1])  # Exclude the no-object class
+            pred_boxes = torch.from_numpy(box)
+            pred_labels = torch.argmax(pred_scores, dim=-1)
+
+            # Get the scores corresponding to the predicted labels
+            pred_scores_for_labels = torch.gather(pred_scores, 1, pred_labels.unsqueeze(-1)).squeeze(-1)
+            predictions.append(
+                {
+                    "boxes": pred_boxes,
+                    "scores": pred_scores_for_labels,
+                    "labels": pred_labels,
+                }
+            )
+        target = [
+            {
+                "boxes": torch.from_numpy(labels[i]["boxes"]),
+                "labels": torch.from_numpy(labels[i]["class_labels"]),
+            }
+            for i in range(len(labels))
+        ]
+        map.update(preds=predictions, target=target)
+        results = map.compute()
+        # Convert tensors to scalars/lists, MLFlow doesn't really like tensors
+        results = {k: v.tolist() if isinstance(v, torch.Tensor) else v for k, v in results.items()}
+        return results
+
     def train(self):
         self.trainer.train()
 
@@ -165,13 +209,15 @@ if __name__ == "__main__":
         per_device_eval_batch_size=1,
         num_train_epochs=1200,
         weight_decay=0.01,
-        #evaluation_strategy="epoch",
+        evaluation_strategy="steps",
+        eval_accumulation_steps=8,
+        eval_steps=5,
         save_strategy="epoch",
         save_total_limit=4,
         load_best_model_at_end=False,
         push_to_hub=False,
-        #gradient_accumulation_steps=16,
-        dataloader_num_workers=8,
+        gradient_accumulation_steps=1,
+        dataloader_num_workers=16,
         #torch_compile=True,
         optim="adamw_torch_fused",
         #torch_compile_backend=_dynamo.optimize("inductor"),

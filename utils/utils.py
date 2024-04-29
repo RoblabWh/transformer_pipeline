@@ -1,5 +1,7 @@
 import json
+from pathlib import Path
 import cv2
+import git
 import numpy as np
 
 
@@ -34,6 +36,16 @@ def read_json(path):
         data = json.load(f)
     return data
 
+def get_git_root(path):
+    git_repo = git.Repo(path, search_parent_directories=True)
+    git_root = git_repo.git.rev_parse("--show-toplevel")
+    return Path(git_root)
+
+def get_models_json(path):
+    if path.stem == "transformer_pipeline":
+        return path
+    else:
+        return path.joinpath("detection/transformer_pipeline")
 
 def draw_bboxes(img, bboxes, labels, show_classes):
     """

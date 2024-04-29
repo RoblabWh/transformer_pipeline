@@ -1,9 +1,8 @@
 from typing import Optional, Union
 from transformers import pipeline
-from utils import read_json
+from utils import read_json, get_git_root, get_models_json
 import warnings
 import torch
-
 
 class Inferencer(object):
 
@@ -33,6 +32,9 @@ class Inferencer(object):
         Returns the models which are currently available.
         :return: List of models as strings
         """
+        # Find base repository path
+        git_root = get_git_root(__file__)
+        transformers_path = get_models_json(git_root)
         return read_json("models.json")['models']
 
     def __load_model(self, checkpoint):
