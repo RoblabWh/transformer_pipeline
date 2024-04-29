@@ -1,6 +1,7 @@
 from typing import Optional, Union
 from transformers import pipeline
 from utils import read_json, get_git_root, get_models_json
+from pathlib import Path
 import warnings
 import torch
 
@@ -35,7 +36,7 @@ class Inferencer(object):
         # Find base repository path
         git_root = get_git_root(__file__)
         transformers_path = get_models_json(git_root)
-        return read_json("models.json")['models']
+        return read_json(transformers_path.joinpath("models.json"))['models']
 
     def __load_model(self, checkpoint):
         """
