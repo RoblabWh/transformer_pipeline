@@ -1,7 +1,6 @@
 import json
-from pathlib import Path
 import cv2
-import git
+from pathlib import Path
 import numpy as np
 
 
@@ -36,10 +35,13 @@ def read_json(path):
         data = json.load(f)
     return data
 
-def get_git_root(path):
-    git_repo = git.Repo(path, search_parent_directories=True)
-    git_root = git_repo.git.rev_parse("--show-toplevel")
-    return Path(git_root)
+def get_repository_root(current_path):
+    # Search for a prominent marker of the project root
+    current_path = Path(current_path)
+    for parent in current_path.parents:
+        if (parent / '.git').is_dir() or (parent / '.detection').is_file():
+            return parent
+    raise Exception('Could not find project root directory')
 
 def get_models_json(path):
     if path.stem == "transformer_pipeline":
