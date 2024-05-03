@@ -47,7 +47,7 @@ def get_models_json(path):
     if path.stem == "transformer_pipeline":
         return path
     else:
-        return path.joinpath("detection/transformer_pipeline")
+        return path.joinpath("transformer_pipeline")
 
 def draw_bboxes(img, bboxes, labels, show_classes):
     """

@@ -1,16 +1,6 @@
 import os
 from typing import Optional, Union
 from utils import read_json, get_repository_root, get_models_json
-
-# Changes Huggingface cache dir when it's loaded as ARGUS submodule
-root = get_repository_root(os.path.abspath(__file__))
-if root.stem != "transformer_pipeline":
-    modelsdir = root.joinpath("models")
-    import os
-    if not os.path.exists(modelsdir):
-        os.makedirs(modelsdir)
-    os.environ['HF_HOME'] = str(modelsdir)
-
 from transformers import pipeline
 import warnings
 import torch
@@ -45,8 +35,8 @@ class Inferencer(object):
         :return: List of models as strings
         """
         # Find base repository path
-        git_root = get_repository_root(os.path.abspath(__file__))
-        transformers_path = get_models_json(git_root)
+        repo_root = get_repository_root(os.path.abspath(__file__))
+        transformers_path = get_models_json(repo_root)
         return read_json(transformers_path.joinpath("models.json"))['models']
 
     def __load_model(self, checkpoint):
