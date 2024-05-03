@@ -6,5 +6,5 @@ __pycache__/
 
 test.py
 ann.json
-inference/ann.json
+src/inference/ann.json
 models/

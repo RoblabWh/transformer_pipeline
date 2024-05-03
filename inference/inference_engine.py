@@ -6,12 +6,11 @@ root = get_git_root(__file__)
 if root.stem != "transformer_pipeline":
     modelsdir = root.joinpath("models")
     import os
-    if not os.path.exists(path):
+    if not os.path.exists(modelsdir):
         os.makedirs(modelsdir)
     os.environ['HF_HOME'] = str(modelsdir)
 
 from transformers import pipeline
-from pathlib import Path
 import warnings
 import torch
 
