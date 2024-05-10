@@ -83,7 +83,8 @@ class Inferencer(object):
         results = []
         for model in self.models:
             print(f"Running inference on {len(data)} images with model {model.model.name_or_path}")
-            result = model(data, threshold=self.score_thr)
+            with torch.no_grad():
+                result = model(data, threshold=self.score_thr)
             results.append(result)
 
         return results
