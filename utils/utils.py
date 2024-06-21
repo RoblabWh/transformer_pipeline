@@ -39,7 +39,7 @@ def get_repository_root(current_path):
     # Search for a prominent marker of the project root
     current_path = Path(current_path)
     for parent in current_path.parents:
-        if (parent / '.git').is_dir() or (parent / '.detection').is_file():
+        if (parent / '.git').is_dir() or (parent / '.git').is_file() or (parent / '.detection').is_file():
             return parent
     raise Exception('Could not find project root directory')
 
