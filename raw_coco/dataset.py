@@ -68,6 +68,8 @@ class Dataset:
         sequentially.
         :param perc_exclude: The percentage of images without annotations to exclude from the dataset set.
         """
+
+        print(f'Splitting dataset into {split[0]}% training, {split[1]}% validation and {split[2]}% test set.')
         if split_type == 'random':
 
             # images without annotations
@@ -75,6 +77,7 @@ class Dataset:
 
             # Calculate the number of images to exclude
             num_exlude = int(np.floor(len(images_without_annotations) * perc_exclude / 100))
+            print(f'Excluding {num_exlude} images without annotations from the dataset.')
 
             exlude_images = random.sample(images_without_annotations, num_exlude)
 
@@ -85,6 +88,7 @@ class Dataset:
             n = len(self.annotations['images'])
             train_split = int(np.floor(n * split[0] / 100))
             val_split = int(np.floor(n * split[1] / 100))
+            print(f'Splitting dataset into {train_split} training, {val_split} validation and {n - train_split - val_split} test images.')
 
             indices = list(range(n))
             random.shuffle(indices)
@@ -127,20 +131,29 @@ class Dataset:
         """
         missing_files = self.get_missing_files()
         missing_annotations = self.get_missing_annotations()
+        unannotated_files = self.get_unannotated_files()
         # prompt user to delete missing files
         if len(missing_files) > 0:
-            print('Missing files: {}'.format(missing_files))
+            print('Missing image files: {}'.format(missing_files))
+            print('Found the above Images in the Annotation file which where not present in the image folder.')
             print('Do you want to delete them from the annotation file?')
             if input('y/n: ') == 'y':
-                #raise NotImplementedError('No you do not. It is not tested enough. Coming soonTM')
                 u.delete_from_json_images(self.ann_file, missing_files)
                 print('Deleted missing files from annotation file.')
         if len(missing_annotations) > 0:
             print('Missing annotations: {}'.format(missing_annotations))
-            print('Do you want to delete them from the annotation file?')
+            print("Found the above Annotations in the Annotation file, but the images are not present in the image folder.")
+            print('Do you want to delete the Annotations from the annotation file?')
             if input('y/n: ') == 'y':
                 print('Removing missing annotations from annotation file...')
                 u.delete_from_json_annotation(self.ann_file, missing_annotations)
+        if len(unannotated_files) > 0:
+            print('Unannotated files: {}'.format(unannotated_files))
+            print("Found the above Images in the Image folder, but they are not annotated.")
+            print('Do you want to delete the Images from the annotation file?')
+            if input('y/n: ') == 'y':
+                print('Removing unannotated images from annotation file...')
+                u.delete_images_from_json(self.ann_file, unannotated_files)
         self.annotations = u.read_json(self.ann_file)
         self.update_images()
         self.update_bboxes()
@@ -157,6 +170,17 @@ class Dataset:
                 missing_files.append(img['file_name'])
         return missing_files
 
+    def get_unannotated_files(self):
+        """
+        Checks if for all images in the annotation file if there is an annotation.
+        :return:
+        """
+        unannotated_files = []
+        for img in self.annotations['images']:
+            if img['id'] not in [ann['image_id'] for ann in self.annotations['annotations']]:
+                unannotated_files.append(img['file_name'])
+        return unannotated_files
+
     def get_missing_annotations(self):
         """
         Checks if the images in the annotations are present in the annotation file.
@@ -168,7 +192,7 @@ class Dataset:
                 missing_annotations.append(img)
         return missing_annotations
 
-    def add_dataset(self, dataset, copy_images=True):
+    def add_dataset(self, dataset):
         """
         Adds another dataset to this dataset. The images and annotations of the other dataset are
         added to this dataset. The image ids are updated to be unique. The image names are changes to
@@ -177,54 +201,77 @@ class Dataset:
         :param copy_images: If True, the images of the other dataset are copied to this dataset.
         """
 
-        # The Image IDs and ANN IDs are resseted to be unique
-        dataset.reset_img_ids()
-        dataset.reset_ann_ids()
-        # Get the last image ID of this dataset, doesn't have to be ordered
-        last_img_id = 0
-        last_ann_id = 0
-        if self.images:
-            last_img_id = max(self.images.keys())
-        if self.annotations['annotations']:
-            last_ann_id = max([ann['id'] for ann in self.annotations['annotations']])
+        # User Input to confirm the action
+        if self.img_folder == dataset.img_folder:
+            print("The image folder of the datasets is the same.\n"
+                  "This mode assumes that each ImageID and AnnotationID is already unique.")
+            copy_images = False
+        else:
+            print("The image folder of the datasets is different. The images from {} will be copied to {}.".format(dataset.img_folder, self.img_folder))
+            copy_images = True
+        if input('Are you sure you want to continue? y/n: ') != 'y':
+            return
 
-        # save old annotations
-        root_ann_path = Path(
-            os.path.join(self.ann_file.parent, str(self.ann_file.stem) + "_root" + self.ann_file.suffix))
+        # Backup of the current annotation file
+        root_ann_path = self.ann_file.with_name(f"{self.ann_file.stem}_old{self.ann_file.suffix}")
         with open(root_ann_path, 'w') as f:
             json.dump(self.annotations, f, ensure_ascii=False, indent=4)
+        print(f"Saved old annotations to {root_ann_path}")
 
-        new_ann_path = Path(
-            os.path.join(self.ann_file.parent, str(dataset.ann_file.stem) + "_added" + dataset.ann_file.suffix))
+        # The Image IDs and ANN IDs are resseted to be unique
+        if copy_images:
+            self.reset_img_ids()
+            self.reset_ann_ids()
+            dataset.reset_img_ids()
+            dataset.reset_ann_ids()
+
+        # Get the last image ID of this dataset, doesn't have to be ordered
+        last_img_id = max(self.images.keys()) if self.images else 0
+        last_ann_id = max([ann['id'] for ann in self.annotations['annotations']]) if self.annotations['annotations'] else 0
+
+        # Path of Annotation File of only the added dataset
+        new_ann_path = self.ann_file.with_name(f"{dataset.ann_file.stem}_added{dataset.ann_file.suffix}")
         new_ann = u.empty_coco_ann()
 
         # update the annotation file
+        old_imgs_names = list(self.images.values())
         for img in tqdm(dataset.annotations['images'], desc='Adding images to dataset...'):
             old_file_name = img['file_name']
-            img['id'] += last_img_id
-            img['file_name'] = str(img['id']).zfill(6) + '.' + img['file_name'].split('.')[-1].lower()
-            self.annotations['images'].append(img)
+            # check if the image is already in the dataset
+            # if old_file_name not in self.images.values():
+            if copy_images:
+                img['id'] += last_img_id
+                img['file_name'] = str(img['id']).zfill(6) + '.' + img['file_name'].split('.')[-1].lower()
+            # The following condition should check whether the image is already part of the dataset
+            # It now checks if the image is copied and than adds it to the dataset, but this is errorprone
+            if copy_images:
+                self.annotations['images'].append(img)
             new_ann['images'].append(img)
-            # Copies the images to the correct folder if move_images is True
+            # Copies the images to the correct folder if copy_images is True
             if copy_images:
                 img_path = os.path.join(dataset.img_folder, old_file_name)
                 new_img_path = os.path.join(self.img_folder, img['file_name'])
                 shutil.copy(img_path, new_img_path)
+
         for ann in dataset.annotations['annotations']:
-            ann['id'] += last_ann_id
-            ann['image_id'] += last_img_id
+            if copy_images:
+                ann['id'] += last_ann_id
+                ann['image_id'] += last_img_id
             self.annotations['annotations'].append(ann)
             new_ann['annotations'].append(ann)
 
         # save the new annotations
         with open(new_ann_path, 'w') as f:
             json.dump(new_ann, f, ensure_ascii=False, indent=4)
+        print("Added images to the dataset. Saved added annotations to {}".format(new_ann_path))
 
         # update the categories
-        self.reset_img_ids()
-        self.reset_ann_ids()
+        # self.reset_ann_ids()
+        # if rename_images:
+        #     self.reset_img_ids()
+        #     self.rename_images()
         self.update_json()
-        self.rename_images()
+        print("Current Annotation has been updated and contains {} images.".format(len(self.annotations['images'])))
 
     def reset_img_ids(self):
         """
@@ -542,6 +589,32 @@ class Dataset:
             (image[h2 - overlap:, w2 - overlap:], w2 - overlap, h2 - overlap),
         ]
 
+    def create_annotation_from_folder(self):
+        """
+        Reads the images folder and creates the COCO annotations for each image in the folder.
+        """
+        images = []
+        annotations = []
+        image_id = 1
+        annotation_id = 1
+        print("Loading all images from the rootfolder and resetting loaded annotation file.")
+        if input('This will delete all current annotations. Are you sure you want to continue? y/n: ') != 'y':
+            return
+        for img_name in tqdm(os.listdir(self.img_folder), desc='Loading images'):
+            img_path = os.path.join(self.img_folder, img_name)
+            img = cv2.imread(img_path)
+            if img is None:
+                continue
+            h, w = img.shape[:2]
+            images.append({
+                'id': image_id,
+                'width': w,
+                'height': h,
+                'file_name': img_name
+            })
+            image_id += 1
+        self.annotations['images'] = images
+        self.annotations['annotations'] = annotations
 
     def get_image(self, img_id):
         """

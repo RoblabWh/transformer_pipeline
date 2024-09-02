@@ -1,10 +1,15 @@
 import os
 import json
-from utils import group_annotations_by_image
 import glob
 import cv2
 
-# TODO MAYBE ONE OF THESE FUNCTIONS SHUFFLES THE CATEGORY IDS
+def group_annotations_by_image(annotations):
+    grouped_annotations = {}
+    for ann in annotations:
+        if ann["image_id"] not in grouped_annotations:
+            grouped_annotations[ann["image_id"]] = []
+        grouped_annotations[ann["image_id"]].append(ann)
+    return grouped_annotations
 
 
 def convert_labelstudio_to_coco_format(custom_format_data, root_dir):
@@ -244,9 +249,10 @@ def merge_json(input_folder, output_json):
 
 
 def main():
-    input_json = "/home/windos/Downloads/project-1-at-2023-12-13-15-09-ef7173e7.json"
-    output_json = "/home/windos/Desktop/datasets/Datensatz-Optimierung/ann_coco.json"
-    convert_json(input_json, output_json, root_dir='/home/windos/Desktop/datasets/Datensatz-Optimierung/images', mode_coco_to_custom=False)
+    # input_json = "/home/nex/Bilder/Datasets/Viersen2024/ann.json"
+    input_json = "/home/nex/Bilder/Datasets/Viersen2024_2/project-13-at-2024-08-22-13-08-8b8f0e1a.json"
+    output_json = "/home/nex/Bilder/Datasets/Viersen2024_2/ann.json"
+    convert_json(input_json, output_json, root_dir='/home/nex/Bilder/Datasets/Viersen2024_2/images', mode_coco_to_custom=False)
 
 
 if __name__ == "__main__":

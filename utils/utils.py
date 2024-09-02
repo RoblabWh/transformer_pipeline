@@ -164,16 +164,6 @@ def delete_from_json_annotation(json_file, annotation):
     with open(json_file, 'w') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-
-def group_annotations_by_image(annotations):
-    grouped_annotations = {}
-    for ann in annotations:
-        if ann["image_id"] not in grouped_annotations:
-            grouped_annotations[ann["image_id"]] = []
-        grouped_annotations[ann["image_id"]].append(ann)
-    return grouped_annotations
-
-
 def calc_iou(bbox1, bbox2):
     """
     Calculates the IoU for two bounding boxes
