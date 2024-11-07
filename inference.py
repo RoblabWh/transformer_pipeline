@@ -25,9 +25,9 @@ if __name__ == "__main__":
 
     # Use huggingface dataset for inference
     parser.add_argument('--dataset', default=None, type=str, help='Dataset to use for inference')
-    parser.add_argument('--dataset_name', default='GOLD', type=str, help='Name of the Dataset to use for inference')
+    parser.add_argument('--dataset_name', default=None, type=str, help='Name of the Dataset to use for inference')
     parser.add_argument('--subset', default='test', help='Subset of the Dataset to use for inference')
-    parser.add_argument('--num_images', default=10, type=int, help='Number of images to use for inference')
+    parser.add_argument('--num_images', default=20, type=int, help='Number of images to use for inference')
 
     parser.add_argument('--outputfolder', type=str, nargs='+', default=None, help='Outputfolder everything get\'s saved in')
     parser.add_argument('--ann_path', type=str, default=None, help='Path to the annotation file.')

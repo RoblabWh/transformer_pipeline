@@ -202,7 +202,7 @@ class DataHandler(object):
         if self.args.dataset is not None:
             from datasets import load_dataset
             print(f"Loading dataset {self.args.dataset_name} from {self.args.dataset}...")
-            dataset = load_dataset(path=str(self.args.dataset), name=str(self.args.dataset_name), trust_remote_code=True)
+            dataset = load_dataset(path=str(self.args.dataset), name=self.args.dataset_name, trust_remote_code=True)
             subset = dataset[self.args.subset]
             if hasattr(self.args, 'num_images') and self.args.num_images:
                 random_indices = np.random.choice(len(subset), self.args.num_images, replace=False)
