@@ -43,7 +43,7 @@ class Dataset:
         self.bboxes = {}
         self.update_bboxes()
 
-        self.check_for_missing()
+        #self.check_for_missing()
 
     def get_number_of_images(self):
         return len(self.annotations['images'])

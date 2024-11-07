@@ -1,3 +1,4 @@
+from collections import defaultdict, Counter
 import json
 import cv2
 from pathlib import Path
@@ -49,7 +50,7 @@ def get_models_json(path):
     else:
         return path.joinpath("transformer_pipeline")
 
-def draw_bboxes(img, bboxes, labels, show_classes):
+def draw_bboxes(img, bboxes, labels, show_classes, detr=False):
     """
     A function that draws bounding boxes on an image.
     :param img:
@@ -66,15 +67,17 @@ def draw_bboxes(img, bboxes, labels, show_classes):
         else:
             label_idx = labels[i] # Normal Dataset
 
-        label = categories[label_idx]
-
-        if label_idx >= len(colors):
-            color = (255, 255, 255)
-        else:
-            color = colors[label_idx]
+        label = categories[label_idx] if label_idx < len(categories) else "unknown"
+        color = colors[label_idx % len(colors)]
 
         if isinstance(bbox, dict):
             x, y, xmax, ymax = bbox['xmin'], bbox['ymin'], bbox['xmax'], bbox['ymax']
+        elif detr:
+            center_x, center_y, w, h = bbox
+            x = center_x - w / 2
+            y = center_y - h / 2
+            xmax = x + w
+            ymax = y + h
         else:
             x, y, w, h = bbox
             xmax = x + w
@@ -103,6 +106,23 @@ def compare_images(img1, img2, threshold=10):
     diff = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)[1]
     return not np.any(diff)
 
+def calculate_average_bbox_number(annotations):
+    """
+    A function that prints some statistics about the dataset.
+    :param annotations: Path the the annotation file
+    :return: (str) Statistics about the dataset
+    """
+    with open(annotations) as f:
+        data = json.load(f)
+
+    # Count the number of annotations per image
+    image_bbox_counts = defaultdict(int)
+    for ann in data['annotations']:
+        image_bbox_counts[ann['image_id']] += 1
+
+    bbox_num = Counter(image_bbox_counts.values())
+    avg_bbox_num = len(data['annotations']) / len(data['images'])
+    return f"Average number of bboxes per image: {avg_bbox_num:.2f}\nBbox distribution: {bbox_num}"
 
 # TODO testen
 def delete_from_json_images(json_file, img_names):
