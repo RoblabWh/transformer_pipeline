@@ -78,6 +78,7 @@ class DataHandler(object):
             else:
                 self.image_paths = self.splitter.split(image_data=self.image_paths, outputfolder=self.outputfolder, max_splitting_steps=self.args.max_splitting_steps)
 
+
     def postprocess(self, inference_results):
         """
         Returns the results of the inference after merging split images and/or multiple models.

@@ -5,7 +5,7 @@ from inference.inference_engine import Inferencer
 
 def main(args):
     datahandler = DataHandler(args)
-    inferencer = Inferencer(args.checkpoints, args.score_thr)
+    inferencer = Inferencer(args.checkpoints, args.score_thr, args.batch_size)
 
     data = datahandler.get_data()
     results = inferencer(data)
