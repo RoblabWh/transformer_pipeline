@@ -114,7 +114,7 @@ class Inferencer(object):
 
     def batch_generator(self):
         for image in self.data:
-            if image is instance(str):
+            if isinstance(image, str):
                 image_path = image
                 image = np.array(Image.open(image_path).convert("RGB"))
             else:
