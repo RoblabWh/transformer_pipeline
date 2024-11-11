@@ -12,6 +12,7 @@ import numpy as np
 import albumentations as A
 import warnings
 import torch
+import json
 
 
 class Inferencer(object):
@@ -65,11 +66,17 @@ class Inferencer(object):
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         try:
             fs = HfFileSystem()
-            files = fs.ls(checkpoint)
+            files = fs.ls(checkpoint, detail=False)
             preprocessor_path = next((file for file in files if "preprocessor_config.json" in file), None)
-            with fs.open(preprocessor_path, "r") as f:
-                data = read_json(f)
-                self.max_size = data["size"]["longest_edge"]
+            if preprocessor_path and not preprocessor_path.startswith("hf://"):
+                preprocessor_path = f"hf://{preprocessor_path}"
+            if preprocessor_path:
+                with fs.open(preprocessor_path, "r") as f:
+                    data = json.load(f)
+                    self.max_size = data["size"]["longest_edge"]
+            else:
+                import warnings
+                warnings.warn(f"Preprocessor config not found in {checkpoint}. Using default size {self.max_size}x{self.max_size}. This might be wrong,", UserWarning, stacklevel=2)
         except:
             abspath = os.path.abspath(checkpoint)
             # Check and load preprocessor config
