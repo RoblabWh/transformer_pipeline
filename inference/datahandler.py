@@ -107,10 +107,13 @@ class DataHandler(object):
         else:
             images = self.image_paths
 
-        for i, img_src in enumerate(images):
-            # if not results[i]:
-            #     continue
+        idxs = np.arange(len(images)).tolist()
+        current_idx = 0
+        print("Press 'd' for next image, 'a' for previous image, or 'q' to quit: ")
 
+        while True:
+            idx = idxs[current_idx]
+            img_src = images[idx]
             if not self.__source_is_huggingface():
                 image = cv2.imread(str(img_src))
             else:
@@ -118,8 +121,8 @@ class DataHandler(object):
                 image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
             if self.args.print_results:
-                print(f"Results for image {self.image_paths[i]}")
-                for detection in results[i]:
+                print(f"Results for image {self.image_paths[idx]}")
+                for detection in results[idx]:
                     score = detection["score"]
                     label = detection["label"]
                     box = [round(i, 2) for i in detection["box"].values()]
@@ -129,10 +132,25 @@ class DataHandler(object):
                     )
                 print("----------------------------------------\n")
 
-            boxxed_img = draw_bboxes(image, [detection["box"] for detection in results[i]], [detection["label"] for detection in results[i]], True)
+            boxxed_img = draw_bboxes(image, [detection["box"] for detection in results[idx]], [detection["label"] for detection in results[idx]], True)
 
             cv2.imshow("Image", boxxed_img)
-            cv2.waitKey(0)
+            key = cv2.waitKey(0)
+
+            if key == ord('d'):
+                if current_idx < len(images) - 1:
+                    current_idx += 1
+                else:
+                    # print("This was the last image, next image will be first in this dataset.")
+                    current_idx = 0
+            elif key == ord('a'):
+                if current_idx > 0:
+                    current_idx -= 1
+                else:
+                    # print("This was the first image, next image will be the last in this dataset.")
+                    current_idx = len(images) - 1
+            elif key == ord('q'):
+                break
 
     def get_annotations_as_json(self, results):
         """
@@ -206,9 +224,11 @@ class DataHandler(object):
             dataset = load_dataset(path=str(self.args.dataset), name=self.args.dataset_name, trust_remote_code=True)
             subset = dataset[self.args.subset]
             if hasattr(self.args, 'num_images') and self.args.num_images:
-                random_indices = np.random.choice(len(subset), self.args.num_images, replace=False)
-                images = subset.select(random_indices)['image']
-                indices = random_indices
+                if self.args.random:
+                    indices = np.random.choice(len(subset), self.args.num_images, replace=False)
+                else:
+                    indices = np.arange(len(subset))[:self.args.num_images]
+                images = subset.select(indices)['image']
             else:
                 images = subset['image']
                 indices = [i for i in range(len(subset))]

@@ -76,7 +76,7 @@ class Splitter(object):
         :return: list of images
         """
         h, w = image.shape[:2]
-        if (h > 1200 or w > 1200) and remaining_steps > 0:
+        if (h > 2000 or w > 2000) and remaining_steps > 0:
             remaining_steps -= 1
             images = self.split_image_into_four(image)
             new_images = []

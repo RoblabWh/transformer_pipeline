@@ -383,7 +383,7 @@ def main():
     # Load dataset, prepare splits
     # ------------------------------------------------------------------------------------------------
 
-    dataset = load_dataset(data_args.dataset_name, cache_dir=model_args.cache_dir)
+    dataset = load_dataset(path=data_args.dataset_name, name="VIERSEN2024", cache_dir=model_args.cache_dir)
 
     # If we don't have a validation split, split off a percentage of train as validation
     data_args.train_val_split = None if "validation" in dataset.keys() else data_args.train_val_split

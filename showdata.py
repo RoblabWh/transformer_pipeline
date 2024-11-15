@@ -1,5 +1,6 @@
 from datasets import load_dataset, get_dataset_split_names, get_dataset_config_names, load_dataset_builder
 import cv2
+import argparse
 import numpy as np
 import utils as u
 
@@ -136,8 +137,7 @@ def do_transforms(dataset, max_size = 1333):
     dataset["validation"] = dataset["validation"].with_transform(validation_transform_batch)
     dataset["test"] = dataset["test"].with_transform(validation_transform_batch)
 
-def show_image_with_boxes(index, subset_, show_classes=True):
-    example = ds[subset_][index]
+def show_image_with_boxes(example, show_classes=True):
     detr = not "image" in example.keys()
     if not detr:
         image = cv2.cvtColor(np.array(example['image']), cv2.COLOR_RGB2BGR)
@@ -151,33 +151,38 @@ def show_image_with_boxes(index, subset_, show_classes=True):
         labels = example['labels']['class_labels'].numpy()
         bboxes = example['labels']['boxes'].numpy() * image.shape[0]
 
-    boxxed_img = u.draw_bboxes(image, bboxes, labels, show_classes, detr=True)
+    boxxed_img = u.draw_bboxes(image, bboxes, labels, show_classes, detr=detr)
     return boxxed_img
 
-if __name__ == "__main__":
-    #name = "/home/nex/Bilder/Datasets/FireDetDataset/"
-    name = "RoblabWhGe/FireDetDataset"
-    ds_builder = load_dataset_builder(name, trust_remote_code=True)
-    print(ds_builder.info.description)
-    configs = get_dataset_config_names(name, trust_remote_code=True)
-    print(configs)
-    ds = load_dataset(name,"VIERSEN2024", token=True, trust_remote_code=True)
-    do_transforms(ds)
-    subset = 'train'
-    current_index = 0
-    total_images = len(ds[subset])
+def show(args):
+    datasetconfig = args.dataset
+    if args.info:
+        ds_builder = load_dataset_builder(datasetconfig, trust_remote_code=True)
+        print(ds_builder.info.description)
+        configs = get_dataset_config_names(datasetconfig, trust_remote_code=True)
+        print(configs)
+    dataset = load_dataset(datasetconfig, args.datasetname, token=True, trust_remote_code=True)
+
+    if args.transform:
+        do_transforms(dataset)
+
+    subset = args.subset
+    total_images = len(dataset[subset])
 
     # sample images
-    samples = total_images
-    idxs = np.random.choice(np.arange(total_images), samples, replace=False).tolist()
+    samples = total_images if args.samples is None else args.samples
+    idxs = np.random.choice(np.arange(total_images), samples, replace=False).tolist() if args.randomize else np.arange(samples).tolist()
 
     cv2.namedWindow("Image", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Image", 800, 600)
+
     print("Press 'd' for next image, 'a' for previous image, or 'q' to quit: ")
 
+    current_index = 0
     while True:
         idx = idxs[current_index]
-        boxed_image = show_image_with_boxes(idx, subset, True)
+        image = dataset[subset][idx]
+        boxed_image = show_image_with_boxes(image, args.classnames)
         cv2.imshow("Image", boxed_image)
         key = cv2.waitKey(0)
 
@@ -195,3 +200,20 @@ if __name__ == "__main__":
                 current_index = samples - 1
         elif key == ord('q'):
             break
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Lookup and show images from a dataset')
+
+    # Use images on disk for inference
+    parser.add_argument('--dataset', default="RoblabWhGe/FireDetDataset", type=str, help='Dataset to load images from (Either Hub or Local)')
+    parser.add_argument('--datasetname', default="BASE", type=str, help='Dataset BuilderConfig Name to load, if "None" will use the default')
+    parser.add_argument('--subset', default="train", type=str, help='Subset to load, either train, validation or test (default: \'train\')')
+    parser.add_argument('--samples', default=None, type=int, help='Number of samples to show, by default shows all images in the subset (default: None)')
+    parser.add_argument('--info', default=True, type=bool, help='Print dataset info (default: False)')
+    parser.add_argument('--randomize', default=False, type=bool, help='Randomizes the images in the dataset before displaying (default: False)')
+    parser.add_argument('--classnames', default=False, type=bool, help='Applies transformation to the images, as it is done in training (default: False)')
+    parser.add_argument('--transform', default=True, type=bool, help='Applies transformation to the images, as it is done in training (default: False)')
+
+    args = parser.parse_args()
+
+    show(args)
