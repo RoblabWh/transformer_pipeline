@@ -2,7 +2,6 @@ import os
 from typing import Optional, Union
 
 from huggingface_hub import HfFileSystem
-from joblib.externals.cloudpickle import instance
 
 import utils
 from utils import read_json, get_repository_root, get_models_json

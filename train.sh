@@ -2,8 +2,12 @@
 # microsoft/conditional-detr-resnet-50
 # SenseTime/deformable-detr 
 #        --num_queries 100 \ check where to add
+#         this parameter unfortunatly produces errors in the framework
+# Test other warmup ratios from 1% to 10% (1e-2 to 1e-1)
+# Maybew decrase LR to 1e-5?
 # https://huggingface.co/docs/autotrain/object_detection_params
 # https://github.com/huggingface/transformers/blob/main/examples/pytorch/object-detection/README.md
+# https://github.com/huggingface/transformers/blob/main/src/transformers/training_args.py
 python run_object_detection.py \
     --model_name_or_path SenseTime/deformable-detr \
     --dataset_name RoblabWhGe/FireDetDataset \
@@ -15,6 +19,8 @@ python run_object_detection.py \
     --fp16 true \
     --learning_rate 5e-5 \
     --weight_decay 1e-4 \
+    --warmup_ratio 5e-2 \
+    --max_grad_norm 1e-1 \
     --dataloader_num_workers 16 \
     --dataloader_prefetch_factor 2 \
     --per_device_train_batch_size 4 \

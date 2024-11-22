@@ -130,9 +130,6 @@ class Dataset:
         Checks if there are any missing images or annotations and deletes them from the annotation file.
         """
         missing_files = self.get_missing_files()
-        missing_annotations = self.get_missing_annotations()
-        unannotated_files = self.get_unannotated_files()
-        # prompt user to delete missing files
         if len(missing_files) > 0:
             print('Missing image files: {}'.format(missing_files))
             print('Found the above Images in the Annotation file which where not present in the image folder.')
@@ -140,6 +137,7 @@ class Dataset:
             if input('y/n: ') == 'y':
                 u.delete_from_json_images(self.ann_file, missing_files)
                 print('Deleted missing files from annotation file.')
+        missing_annotations = self.get_missing_annotations()
         if len(missing_annotations) > 0:
             print('Missing annotations: {}'.format(missing_annotations))
             print("Found the above Annotations in the Annotation file, but the images are not present in the image folder.")
@@ -147,6 +145,7 @@ class Dataset:
             if input('y/n: ') == 'y':
                 print('Removing missing annotations from annotation file...')
                 u.delete_from_json_annotation(self.ann_file, missing_annotations)
+        unannotated_files = self.get_unannotated_files()
         if len(unannotated_files) > 0:
             print('Unannotated files: {}'.format(unannotated_files))
             print("Found the above Images in the Image folder, but they are not annotated.")
