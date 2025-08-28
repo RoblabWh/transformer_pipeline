@@ -6,7 +6,7 @@ from utils import calc_iou, to_xywh, to_xyxy, to_dict
 
 class Merger(object):
 
-    def __init__(self, overlap_pixels=0):
+    def __init__(self, overlap_pixels=0, progress_tracker=None):
         self.overlap_pixels = overlap_pixels
 
     def merge(self, inference_results_, all_split_images_):

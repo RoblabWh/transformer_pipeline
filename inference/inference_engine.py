@@ -16,7 +16,7 @@ import json
 
 class Inferencer(object):
 
-    def __init__(self, checkpoints: Optional[Union[str, list]] = None, score_thr: Optional[float] = 0.5, batch_size: Optional[int] = None):
+    def __init__(self, checkpoints: Optional[Union[str, list]] = None, score_thr: Optional[float] = 0.5, batch_size: Optional[int] = None, progress_tracker=None):
         """
         The InferenceEngine class is used to run the inference of a MMDetection Net on a folder of images.
 
@@ -24,6 +24,7 @@ class Inferencer(object):
         """
         self.max_size = 1333
         self.batch_size = None if batch_size is None else int(batch_size)
+        self.progress_tracker = progress_tracker
         self.data = []
         self.transfrom_params = []
         self.basic_transform = A.Compose([
@@ -192,12 +193,17 @@ class Inferencer(object):
 
         results = []
         self.data = data
-        for model in self.models:
+        for i, model in enumerate(self.models):
             print(f"Running inference on {len(data)} images with model {model.model.name_or_path}")
             with torch.no_grad():
                 result = [output for output in model(self.batch_generator(), threshold=self.score_thr)]
                 #result = model(data, threshold=self.score_thr)
             results.append(result)
+            if self.progress_tracker:
+                self.progress_tracker.update_step_progress_of_total(i + 1, len(self.models))
+    
+        if self.progress_tracker:
+            self.progress_tracker.set_message("Transforming bounding boxes")
         self.transform_bboxes(results)
         self.data, self.transfrom_params = [], []
 

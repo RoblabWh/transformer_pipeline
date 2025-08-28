@@ -16,17 +16,18 @@ from .annotationhandler import AnnotationHandler
 
 class DataHandler(object):
 
-    def __init__(self, args=None):
+    def __init__(self, args=None, progress_tracker=None):
 
         self.args = self.__setup_args(args)
         self.outputfolder = self.__get_output_folder()
         self.input_path = Path(self.args.inputfolder) if self.args.inputfolder is not None else None
         self.dataset, self.images, self.indices = self.__setup_dataset_images()
         self.image_paths = self.__setup_image_paths()
+        self.progress_tracker = progress_tracker
 
         # For splitting images into multiple smaller ones
-        self.splitter = Splitter(overlap_pixels=0)
-        self.merger = Merger(overlap_pixels=0)
+        self.splitter = Splitter(overlap_pixels=0, progress_tracker=progress_tracker)
+        self.merger = Merger(overlap_pixels=0, progress_tracker=progress_tracker)
         self.preprocess()
 
     def __del__(self):

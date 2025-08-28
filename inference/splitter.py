@@ -8,11 +8,12 @@ import numpy as np
 
 class Splitter(object):
 
-    def __init__(self, overlap_pixels=0):
+    def __init__(self, overlap_pixels=0, progress_tracker=None):
         self.overlap_pixels = overlap_pixels
         self.split_images = {}
         self.remove_later = {}
         self.preprocessed_img_folder = None
+        self.progress_tracker = progress_tracker
 
     def split(self, image_data: Union[List[JpegImagePlugin.JpegImageFile], List[PosixPath]], outputfolder: str = None, max_splitting_steps: int = 5, image_paths: List[str] = None):
         """
@@ -27,6 +28,8 @@ class Splitter(object):
             raise ValueError('No image data set. Use set_image_paths() or use a dataset to set them.')
         if outputfolder is None:
             raise ValueError('No outputfolder was set. Use set_image_paths() to set them.')
+        if self.progress_tracker:
+            self.progress_tracker.set_message("Splitting images")
 
         # Create a new folder for the preprocessed images
         self.preprocessed_img_folder = Path(outputfolder) / 'preprocessed'
@@ -64,6 +67,8 @@ class Splitter(object):
                 ids[split_index + j] = image.shape[:2]
 
             self.split_images[image_path] = ids
+            if self.progress_tracker:
+                self.progress_tracker.update_step_progress_of_total(i + 1, len(image_data))
 
         #new_image_paths.sort(key=lambda x: x.name)
 
