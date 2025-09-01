@@ -43,7 +43,7 @@ class ProgressTracker:
             message = self.message
             if self.current_step not in ["queued", "finished", "failed"]:
                 message += f" ({int(self.step_progress*100)}%)"
-            logger.info(f"ProgressTracker: {status}, {self.overall_progress}%, {message}")
+            # logger.info(f"ProgressTracker: {status}, {self.overall_progress}%, {message}")
             self.broadcast_status_function(
                 status=status,
                 progress=self.overall_progress,
