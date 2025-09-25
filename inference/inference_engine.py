@@ -12,7 +12,11 @@ import albumentations as A
 import warnings
 import torch
 import json
+import math
+import logging
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Inferencer(object):
 
@@ -193,18 +197,36 @@ class Inferencer(object):
 
         results = []
         self.data = data
+        batch_size = 1 if self.batch_size is None else self.batch_size
+        log_every = 5
+        counter = 0
+        total_steps = len(data) * len(self.models)
         for i, model in enumerate(self.models):
             print(f"Running inference on {len(data)} images with model {model.model.name_or_path}")
             with torch.no_grad():
-                result = [output for output in model(self.batch_generator(), threshold=self.score_thr)]
-                #result = model(data, threshold=self.score_thr)
-            results.append(result)
+                model_results = []
+                for batch_idx, batch_outputs in enumerate(
+                        model(self.batch_generator(), threshold=self.score_thr), start=1):
+                    # logger.info(f"Processed batch {batch_idx} with model {model.model.name_or_path}")
+                    model_results.append(batch_outputs)  # collect results
+                    counter += 1
+                    if self.progress_tracker and counter == log_every:
+                        counter = 0 
+                        current_step = batch_idx + i * len(data)
+                        self.progress_tracker.update_step_progress_of_total(current_step, total_steps)
+                        # logging.info(f"Processed {current_step} out of {total_steps} steps.")
+
+                # result = [output for output in model(self.batch_generator(), threshold=self.score_thr)]
+                # #result = model(data, threshold=self.score_thr)
+            results.append(model_results)
             if self.progress_tracker:
                 self.progress_tracker.update_step_progress_of_total(i + 1, len(self.models))
-    
+
         if self.progress_tracker:
+            logger.info("Transforming bounding boxes to original image sizes.")
             self.progress_tracker.set_message("Transforming bounding boxes")
         self.transform_bboxes(results)
+        logger.info("Bounding boxes transformed.")
         self.data, self.transfrom_params = [], []
 
         return results
