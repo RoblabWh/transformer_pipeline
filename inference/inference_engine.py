@@ -14,13 +14,14 @@ import torch
 import json
 import math
 import logging
+from .progress_tracker import ProgressTracker
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class Inferencer(object):
 
-    def __init__(self, checkpoints: Optional[Union[str, list]] = None, score_thr: Optional[float] = 0.5, batch_size: Optional[int] = None, progress_tracker=None):
+    def __init__(self, checkpoints: Optional[Union[str, list]] = None, score_thr: Optional[float] = 0.5, batch_size: Optional[int] = None, progress_tracker: Optional[ProgressTracker] = None):
         """
         The InferenceEngine class is used to run the inference of a MMDetection Net on a folder of images.
 
@@ -200,9 +201,14 @@ class Inferencer(object):
         batch_size = 1 if self.batch_size is None else self.batch_size
         log_every = 5
         counter = 0
+        total_images = len(data)
         total_steps = len(data) * len(self.models)
+        estimated_time_per_batch = []
+        if self.progress_tracker:
+            estimated_time_per_batch = [total_images*self.progress_tracker.get_inference_time_for_model(model.model.name_or_path) for model in self.models]
+            self.progress_tracker.update_time_estimate_of_current_step(math.ceil(sum(estimated_time_per_batch)))
         for i, model in enumerate(self.models):
-            print(f"Running inference on {len(data)} images with model {model.model.name_or_path}")
+            logger.info(f"Running inference on {len(data)} images with model {model.model.name_or_path}")
             with torch.no_grad():
                 model_results = []
                 for batch_idx, batch_outputs in enumerate(
@@ -212,7 +218,11 @@ class Inferencer(object):
                     counter += 1
                     if self.progress_tracker and counter == log_every:
                         counter = 0 
-                        current_step = batch_idx + i * len(data)
+                        current_step = batch_idx + i * total_images
+                        remaining_time_current_batch = (total_images - batch_idx) * self.progress_tracker.get_inference_time_for_model(model.model.name_or_path)
+                        time_estimate = sum(estimated_time_per_batch[i+1:]) + remaining_time_current_batch
+                        time_estimate *= self.progress_tracker.splitting_efficiency_factor
+                        self.progress_tracker.update_time_estimate_of_current_step(math.ceil(time_estimate))
                         self.progress_tracker.update_step_progress_of_total(current_step, total_steps)
                         # logging.info(f"Processed {current_step} out of {total_steps} steps.")
 
