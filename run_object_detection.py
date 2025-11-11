@@ -1,4 +1,4 @@
-# Code from: https://github.com/huggingface/transformers/blob/main/examples/pytorch/object-detection/run_object_detection.py
+# Code from: https://github.com/huggingface/transformers/blob/main/examples/pytorch/object-detection/run_object_detection.py 
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright 2024 The HuggingFace Inc. team. All rights reserved.
@@ -455,7 +455,7 @@ def main():
                 ],
                 p=0.1,
             ),
-            A.Perspective(p=0.1),
+            #A.Perspective(p=0.1),
             A.HorizontalFlip(p=0.5),
             A.RandomBrightnessContrast(p=0.5),
             A.HueSaturationValue(p=0.1),
