@@ -18,6 +18,8 @@ export CUDA_VISIBLE_DEVICES=0
 # NVIDIA RTX 6000 Ada
 # --per_device_train_batch_size 4 \
 
+# https://huggingface.co/docs/transformers/model_doc/deformable_detr
+
 python run_object_detection.py \
     --model_name_or_path SenseTime/deformable-detr \
     --dataset_name RoblabWhGe/FireDetDataset \
