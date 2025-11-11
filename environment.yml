@@ -40,7 +40,8 @@ dependencies:
       - fonttools==4.51.0
       - frozenlist==1.4.1
       - fsspec==2024.2.0
-      - huggingface-hub==0.26.1
+      - hf-xet==1.2.0
+      - huggingface-hub==0.36.0
       - idna==3.6
       - imageio==2.34.0
       - importlib-metadata==7.1.0
@@ -89,7 +90,7 @@ dependencies:
       - pyyaml==6.0.1
       - regex==2023.12.25
       - requests==2.31.0
-      - safetensors==0.4.2
+      - safetensors==0.6.2
       - scikit-image==0.22.0
       - scikit-learn==1.4.1.post1
       - scipy==1.12.0
@@ -98,12 +99,12 @@ dependencies:
       - threadpoolctl==3.3.0
       - tifffile==2024.2.12
       - timm==0.9.16
-      - tokenizers==0.20.1
+      - tokenizers==0.21.4
       - torch==2.8.0+cu129
       - torchmetrics==1.4.0
       - torchvision==0.23.0+cu129
       - tqdm==4.66.2
-      - transformers==4.46.0
+      - transformers==4.51.0
       - triton==3.4.0
       - typing-extensions==4.10.0
       - tzdata==2024.1
