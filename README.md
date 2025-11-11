@@ -1,7 +1,16 @@
 # transformer-pipeline
 
-pip3 install torch torchvision transformers[torch] albumentations datasets pycocotools timm gitpython
+```bash
+conda env create -f environment.yml
+conda activate transformers
+```
 
-### Training only
+## Training & Evaluation
+```bash
+./train.sh
+```
 
-pip install torchmetrics
+## Evaluation only
+```bash
+./evaluate.sh
+```

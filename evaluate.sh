@@ -4,6 +4,10 @@
 #        --num_queries 100 \ check where to add
 # https://huggingface.co/docs/autotrain/object_detection_params
 # https://github.com/huggingface/transformers/blob/main/examples/pytorch/object-detection/README.md
+
+# Force use of GPU 0 to avoid nn.DataParallel issue
+export CUDA_VISIBLE_DEVICES=0
+
 python run_object_detection.py \
     --model_name_or_path SenseTime/deformable-detr \
     --dataset_name RoblabWhGe/FireDetDataset \
