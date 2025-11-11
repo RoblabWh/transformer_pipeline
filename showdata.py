@@ -212,9 +212,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Lookup and show images from a dataset')
 
     # Use images on disk for inference
-    parser.add_argument('--dataset', default="/home/nex/Bilder/Datasets/FireDetDataset_TestUp/", type=str, help='Dataset to load images from (Either Hub or Local)')
-    parser.add_argument('--datasetname', default="MODIFIED", type=str, help='Dataset BuilderConfig Name to load, if "None" will use the default')
-    parser.add_argument('--split', default="combined", type=str, help='Subset to load, either train, validation, test or combined (default: \'train\')')
+    parser.add_argument('--dataset', default="RoblabWhGe/FireDetDataset", type=str, help='Dataset to load images from (Either Hub or Local)')
+    parser.add_argument('--datasetname', default="VIERSEN2024", type=str, help='Dataset BuilderConfig Name to load, if "None" will use the default')
+    parser.add_argument('--split', default="test", type=str, help='Subset to load, either train, validation, test or combined (default: \'train\')')
     parser.add_argument('--samples', default=None, type=int, help='Number of samples to show, by default shows all images in the subset (default: None)')
     parser.add_argument('--info', default=True, type=bool, help='Print dataset info (default: False)')
     parser.add_argument('--bboxes', default=True, type=bool, help='Show bounding boxes on the images (default: False)')
