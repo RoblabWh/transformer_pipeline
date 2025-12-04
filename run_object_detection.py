@@ -45,6 +45,23 @@ from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version, send_example_telemetry
 from transformers.utils.versions import require_version
 
+# Disable PIL warnings about large images that could be decompression bomb DOS attack.
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
+
+#######################
+
+import urllib3, socket
+from urllib3.connection import HTTPConnection
+
+HTTPConnection.default_socket_options = ( 
+    HTTPConnection.default_socket_options + [
+    (socket.SOL_SOCKET, socket.SO_SNDBUF, 2000000), 
+    (socket.SOL_SOCKET, socket.SO_RCVBUF, 2000000)
+    ])
+
+###############
+
 
 logger = logging.getLogger(__name__)
 
@@ -383,17 +400,89 @@ def main():
     # Load dataset, prepare splits
     # ------------------------------------------------------------------------------------------------
 
-    dataset = load_dataset(path=data_args.dataset_name, name="VIERSEN2024", cache_dir=model_args.cache_dir)
+    # Load dataset from the hub
+    #dataset = load_dataset(path=data_args.dataset_name, name="VIERSEN2024", cache_dir=model_args.cache_dir, trust_remote_code=True)
+
+    dataset = load_dataset('/run/media/niklas/EDDF-B044/FireDetDataset/FireDetDataset.py', name="BASE", trust_remote_code=True)
+
+
+
+    # print(dataset)
+
+    # def fix_bboxes(example):
+    #     height = example["height"]
+    #     width = example["width"]
+
+    #     new_bboxes = []
+    #     new_categories = []
+    #     new_areas = []
+
+    #     for bbox, category in zip(example["objects"]["bbox"], example["objects"]["category"]):
+    #         x0, y0, w, h = bbox
+
+    #         # Clamp TL corner
+    #         x0 = max(0.0, min(x0, width))
+    #         y0 = max(0.0, min(y0, height))
+
+    #         # Clamp width/height so BR stays inside
+    #         w = max(0.0, min(w, width - x0))
+    #         h = max(0.0, min(h, height - y0))
+
+    #         # Drop invalid boxes entirely
+    #         if w <= 0 or h <= 0:
+    #             continue
+
+    #         new_bboxes.append([x0, y0, w, h])
+    #         new_categories.append(category)
+    #         new_areas.append(w * h)
+
+    #     example["objects"]["bbox"] = new_bboxes
+    #     example["objects"]["category"] = new_categories
+    #     example["objects"]["area"] = new_areas
+
+    #     return example
+
+
+    # def has_boxes(example):
+    #     return len(example["objects"]["bbox"]) > 0
+
+
+    # for split in ["train", "validation", "test"]:
+    #     if split in dataset:
+
+    #         print(f"Fixing bounding boxes in: {split}")
+    #         dataset[split] = dataset[split].map(
+    #             fix_bboxes,
+    #             desc=f"Fixing boxes [{split}]",
+    #             load_from_cache_file=False,
+    #         )
+
+    #         print(f"Filtering empty annotations in: {split}")
+    #         dataset[split] = dataset[split].filter(
+    #             has_boxes,
+    #             desc=f"Filtering [{split}]",
+    #             load_from_cache_file=False,
+    #         )
+
+    print(dataset)
+
 
     # If we don't have a validation split, split off a percentage of train as validation
-    data_args.train_val_split = None if "validation" in dataset.keys() else data_args.train_val_split
+    data_args.train_val_split = None if "validation" in dataset else data_args.train_val_split
     if isinstance(data_args.train_val_split, float) and data_args.train_val_split > 0.0:
         split = dataset["train"].train_test_split(data_args.train_val_split, seed=training_args.seed)
         dataset["train"] = split["train"]
         dataset["validation"] = split["test"]
 
     # Get dataset categories and prepare mappings for label_name <-> label_id
+    # if isinstance(dataset["train"].features["objects"], dict):
+    #     categories = dataset["train"].features["objects"]["category"].feature.names
+    # else:  # (for old versions of `datasets` that used Sequence({...}) of the objects)
+    #     categories = dataset["train"].features["objects"].feature["category"].names
+
+    # we have old version of datasets library that uses Sequence feature for objects
     categories = dataset["train"].features["objects"].feature["category"].names
+
     id2label = dict(enumerate(categories))
     label2id = {v: k for k, v in id2label.items()}
 
@@ -416,6 +505,7 @@ def main():
     model = AutoModelForObjectDetection.from_pretrained(
         model_args.model_name_or_path,
         config=config,
+        resume_download=True,
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
         **common_pretrained_args,
     )

@@ -25,14 +25,14 @@ python run_object_detection.py \
     --dataset_name RoblabWhGe/FireDetDataset \
     --do_train true \
     --do_eval true \
-    --output_dir detr-sensetime-finetuned-firedetv11 \
-    --num_train_epochs 300 \
+    --output_dir models/detr-sensetime-finetuned-firedetv1 \
+    --num_train_epochs 50 \
     --image_square_size 1333 \
-    --fp16 true \
-    --learning_rate 5e-5 \
+    --fp16 false \
+    --learning_rate 1e-5 \
     --weight_decay 1e-4 \
     --warmup_ratio 5e-2 \
-    --max_grad_norm 1e-1 \
+    --max_grad_norm 1.0 \
     --dataloader_num_workers 16 \
     --dataloader_prefetch_factor 2 \
     --per_device_train_batch_size 3 \
